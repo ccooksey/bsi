@@ -11,6 +11,7 @@ import '../App/AppCookieKeys';
 export default function SignIn() {
 
   const auth = AuthConsumer();
+
   const navigate = useNavigate();
 
   const usernameValue = read_cookie(global.CookieKeys.username);
@@ -50,8 +51,8 @@ export default function SignIn() {
         // Display the success message for a few seconds (User can 
         // manually advance if they want).
         setTimeout(()=> {
-        navigate('/introspect');
-        }, 4000);
+          navigate('/dashboard');
+        }, 1000);
       }
     })
     .catch((result) => {

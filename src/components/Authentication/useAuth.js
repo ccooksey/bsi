@@ -335,6 +335,8 @@ function useAuth() {
  
             // I am not sure why, but GET does not work. It does from
             // Postman, but not from express. Changed to POST for now.
+            // I think it is because you are not supposed to have bodies
+            // on GETs.
             fetch('http://localhost:9443/auth/token/introspect', {
                 method: 'POST',
                 cache: 'no-cache',

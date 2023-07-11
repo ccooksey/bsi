@@ -12,6 +12,7 @@ import Home from '../Home/Home';
 import SignIn from '../Authentication/SignIn';
 import Register from '../Authentication/Register';
 import Dashboard from '../Dashboard/Dashboard';
+import Play from '../Play/Play';
 import Preferences from '../Preferences/Preferences';
 import Introspect from '../Authentication/Introspect';
 
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/signin"       element={<SignIn />} />
                 <Route path="/register"     element={<Register />} />
                 <Route path="/dashboard"    element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/play"         element={<RequireAuth><Play /></RequireAuth>} />
                 <Route path="/preferences"  element={<RequireAuth><Preferences /></RequireAuth>} />
                 <Route path="/introspect"   element={<RequireAuth><Introspect /></RequireAuth>} />
               </Routes>

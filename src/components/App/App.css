@@ -2,6 +2,37 @@
 /* Copyright 2023 Chris Cooksey                                              */
 /*---------------------------------------------------------------------------*/
 
+.currentGamesTable {
+  border-collapse: collapse;
+}
+.currentGamesCell {
+  border-collapse: collapse;
+  border: 2px solid black;
+  padding: 10px;
+}
+.currentGamesAction {
+  padding: 10px;
+}
+
+.othelloTable {
+  border-collapse: collapse;
+  border: 2px solid pink;
+  cursor: crosshair;
+}
+
+/* Cells will be exactly width * 2 x height * 2 (retina?). */
+/* Borders are drawn outside, 0.5 * 2 * 2, i.e. 2 px wide. */
+.othelloCell {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  border: 0.5px solid black;
+  padding: 0;
+  background-color: #20C020;
+}
+
 .layout-wrapper {
   padding-top:10px;
   padding-left:40px;
@@ -26,10 +57,10 @@
 
 .content-wrapper {
   width: 100%;
-  padding-left:40px;
+  padding-left:100px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: left;
 }
 
 .authentication-input-width {
