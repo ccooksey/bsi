@@ -1,0 +1,24 @@
+# Apple has some kind of LetsEncrypt SSL certificate problem that
+# will result in none of the site files being found. For whatever
+# reason, this fixes it.
+# https://github.com/remix-run/react-router/issues/8427
+
+BrowserMatch "Safari" nokeepalive
+BrowserMatch "AppleWebKit" nokeepalive
+BrowserMatch "CFNetwork" nokeepalive
+
+# If a React page is refreshed or manually modified, a 404
+# error will be generated (because the url really does not
+# exist outside of React). The following "solution" is less
+# than ideal, but it will at least force the browser back to
+# the home page if either of these things happen.
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-l
+RewriteRule . /index.html [L]
+</IfModule>

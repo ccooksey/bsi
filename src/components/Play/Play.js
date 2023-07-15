@@ -43,11 +43,13 @@ export default function Play() {
   const username = read_cookie(global.CookieKeys.username);
   const usercolor = game?.players[0] === username ? game?.colors[0] : game?.colors[1];
 
+  const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
+
   const auth = AuthConsumer();
 
   useEffect(() => {
     if (id != null) {
-      axios.get(`http://localhost:8082/api/games/othello/${id}`, {
+      axios.get(`${bsi_server}/api/games/othello/${id}`, {
         headers: {
           'Authorization': `${auth.token.token_type} ${auth.token.access_token}`,
           'Cache-Control': 'no-cache',
@@ -63,13 +65,13 @@ export default function Play() {
         console.log('Could not retrieve requested game: ', err);
       });
     }
-  }, [id, auth.token.token_type, auth.token.access_token]);
+  }, [id, auth.token.token_type, auth.token.access_token, bsi_server]);
 
   const handleClick = (e, x, y) => {
     if (typeof e.cancelable !== "boolean" || e.cancelable) {
       e.preventDefault();
     }
-    axios.post(`http://localhost:8082/api/games/othello/${id}/move/`,
+    axios.post(`${bsi_server}/api/games/othello/${id}/move/`,
       { bx: x, by: y },
       { headers: {
         'Authorization': `${auth.token.token_type} ${auth.token.access_token}`,

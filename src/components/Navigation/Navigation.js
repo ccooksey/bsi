@@ -28,11 +28,11 @@ export default function Navigation() {
     <nav>
       <ul>
         <li>  <Link to='/'>Home</Link>                    </li>
-        <li>  <Link to='/SignIn'>Sign In</Link>           </li>
-        <li>  <Link to='/Register'>Register</Link>        </li>
-        <li>  <Link to='/Dashboard'>Dashboard</Link>      </li>
-        <li>  <Link to='/Preferences'>Preferences</Link>  </li>
-        <li>  <Link to='/Introspect'>Introspect</Link>  </li>
+        <li>  <Link to='/signin'>Sign In</Link>           </li>
+        <li>  <Link to='/register'>Register</Link>        </li>
+        <li>  <Link to='/dashboard'>Dashboard</Link>      </li>
+        <li>  <Link to='/preferences'>Preferences</Link>  </li>
+        <li>  <Link to='/introspect'>Introspect</Link>  </li>
       </ul>
       {auth?.token !== null && <button onClick={handleSignOut}>Sign Out</button>}
     </nav>

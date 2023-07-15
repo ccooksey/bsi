@@ -1,13 +1,24 @@
 My first React app!
 
-It doesn't do much right now. It allows users to register and sign in with the
-ou-oauth Oauth 2.0 password grant server also in my github account.
+It allows users to register and sign in with the Oauth 2.0 password grant
+server also in my github account. It will then use the bsi_server to play Othello
+games. Note that the game code is not complete yet. New games have to be created
+manually, and only one player can play, alternating as white then black.
 
-A complete setup requires either a PostgreSQL or MySQL server, an ou-oauth server,
-and this client.
+A complete setup requires either a PostgreSQL or MySQL server, the ou-oauth server,
+a MongoDB server, the bsi_server and this client.
 
-An eventual setup will also require a MongoDB server, and a protected resource server
-that stores user data there (probably a simple game of some sort).
+Running locally is done using
 
-The client can just be dragged over and run, but it would be better to create
-a production build using "npm run build" for efficiency's sake.
+    npm run start
+
+Running on a website is done by Running
+
+    npm run build
+
+and copying the build folder to the website. Rename the build folder to "bsi".
+
+To run on a website requires creation of a .env.production file in each of the three
+components (ou_oauth2, bsi_server and bsi), with real URLs and real certificate
+paths. HTTPS is suupported but it can be run over HTTP without certificates if you wish
+(which is how the development build is configured).

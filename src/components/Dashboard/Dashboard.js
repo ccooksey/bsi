@@ -12,7 +12,7 @@ import '../App/App.css';
 
 // db.othello.insertOne({
 //   created: new Date(),
-//   players: ['hclinton', 'ccooksey'],
+//   players: ['mpotato', 'ccooksey'],
 //   colors: ['white', 'black'],
 //   gameState: [
 //     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
@@ -37,20 +37,12 @@ export default function Dashboard() {
 
   const username = read_cookie(global.CookieKeys.username);
 
+  const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
+
   const auth = AuthConsumer();
-  // axios.interceptors.request.use(config => {
-  //   config.headers = {...config.headers,
-  //     'Authorization': `${auth.token.token_type} ${auth.token.access_token}`,
-  //     'Cache-Control': 'no-cache',
-  //     'Pragma': 'no-cache',
-  //     'Expires': '0'
-  //   }
-  //   console.log("headers = " + JSON.stringify(config.headers));
-  //   return config;
-  // });
 
   useEffect(() => {
-    axios.get('http://localhost:8082/api/games/othello/', {
+    axios.get(`${bsi_server}/api/games/othello/`, {
       headers: {
         'Authorization': `${auth.token.token_type} ${auth.token.access_token}`,
         'Cache-Control': 'no-cache',
@@ -69,7 +61,7 @@ export default function Dashboard() {
     .catch((err) => {
       console.log('Could not retrieve current games: ', err);
     });
-  }, [username, auth.token.access_token, auth.token.token_type]);
+  }, [username, auth.token.access_token, auth.token.token_type, bsi_server]);
 
   const handleClick = (e, _id) => {
     e.preventDefault();

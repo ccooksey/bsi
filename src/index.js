@@ -4,10 +4,17 @@ import './index.css';
 import App from './components/App/App';
 import reportWebVitals from './reportWebVitals';
 
-if (process.env.NODE_ENV !== 'development')
-    console.log = () => {};
+//if (process.env.NODE_ENV !== 'development')
+//    console.log = () => {};
+
+if (process.env.NODE_ENV === 'development') {
+  if (window.location.pathname === '/') {
+    window.location.assign('/bsi');
+  }
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
   <React.StrictMode>
     <App />

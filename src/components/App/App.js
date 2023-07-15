@@ -23,7 +23,6 @@ import Introspect from '../Authentication/Introspect';
  // should only be seen by an authorized user must be served from a separate
  // protected resource server.
 function RequireAuth({ children }) {
-
   const auth = AuthConsumer();
   return auth?.token !== null ? children : <Navigate to='/signin' replace />;
 }
@@ -33,7 +32,7 @@ function App() {
   return (
     <div>
       <AuthProvider>
-        <Router>
+      <Router basename={"/bsi"}>
           <AppLayout>
               <Routes >
                 <Route path="/"             element={<Home />} />

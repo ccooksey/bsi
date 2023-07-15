@@ -16,7 +16,6 @@
 // without them.
 
 import React, { useState, useContext, createContext } from 'react';
-
 // Possible statuses:
 // error: any type of communication error with the authorization server
 // duplicate: user could not be registered bacause the name or email is already registered
@@ -47,6 +46,8 @@ function useAuth() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [token, setToken] = useState(null);
+
+    const ou_oauth2 = `${process.env.REACT_APP_OU_OAUTH2_SERVER_URL}:${process.env.REACT_APP_OU_OAUTH2_SERVER_PORT}`;
  
     // const history = useHistory(); -let's us see past URLs
 
@@ -66,7 +67,7 @@ function useAuth() {
  
             setIsLoading(true);
  
-            fetch('http://localhost:9443/auth/register', {
+            fetch(`${ou_oauth2}/auth/register/`, {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -78,13 +79,13 @@ function useAuth() {
                     'username': username,
                     'eaddress': eaddress,
                     'password': password,
-                    'client_secret': null,
+                    'client_secret': process.env.REACT_APP_BSI_CLIENT_OU_OAUTH2_SERVER_SHARED_SECRET,
                 })
             })
             .then((r) => {
                 // Example r:
-                // {type: 'cors', url: 'http://localhost:9443/auth/register', redirected: false, status: 200, ok: true, …}
-                // {type: 'cors', url: 'http://localhost:9443/auth/register', redirected: false, status: 400, ok: false, …}
+                // {type: 'cors', url: 'https://localhost:9443/auth/register', redirected: false, status: 200, ok: true, …}
+                // {type: 'cors', url: 'https://localhost:9443/auth/register', redirected: false, status: 400, ok: false, …}
 
                 console.log('useAuth.js:useAuth:register:callback called');
                 console.log('useAuth.js:useAuth:register:callback: input r = ', r);
@@ -131,7 +132,7 @@ function useAuth() {
  
             setIsLoading(true);
  
-            fetch('http://localhost:9443/auth/token', {
+            fetch(`${ou_oauth2}/auth/token`, {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -142,13 +143,13 @@ function useAuth() {
                     'grant_type': 'password',
                     'username': username,
                     'password': password,
-                    'client_secret': null,
+                    'client_secret': process.env.REACT_APP_BSI_CLIENT_OU_OAUTH2_SERVER_SHARED_SECRET,
                 })
             })
             .then((r) => {
                 // Example r:
-                // success: {type: 'cors', url: 'http://localhost:9443/auth/signin', redirected: false, status: 200, ok: false, …}
-                // failure: {type: 'cors', url: 'http://localhost:9443/auth/signin', redirected: false, status: 500, ok: false, …}
+                // success: {type: 'cors', url: 'https://localhost:9443/auth/signin', redirected: false, status: 200, ok: false, …}
+                // failure: {type: 'cors', url: 'https://localhost:9443/auth/signin', redirected: false, status: 500, ok: false, …}
 
                 console.log('useAuth.js:useAuth:signin:callback called');
                 console.log('useAuth.js:useAuth:signin:callback: input r = ', r);
@@ -203,7 +204,7 @@ function useAuth() {
 
             setIsLoading(true);
 
-            fetch('http://localhost:9443/auth/me', {
+            fetch(`${ou_oauth2}/auth/me/`, {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -235,7 +236,7 @@ function useAuth() {
                     });
                 } else {
                     // Example r:
-                    // {type: 'cors', url: 'http://localhost:9443/auth/signin', redirected: false, status: 500, ok: false, …}
+                    // {type: 'cors', url: 'https://localhost:9443/auth/signin', redirected: false, status: 500, ok: false, …}
                     // Note r.json() here will fail -OAuth 2.0 returns an HTML response.
                     if (r.status === 500) {
                         console.log('useAuth.js:useAuth:signin:callback: Signin failed. Invalid token.');
@@ -267,7 +268,7 @@ function useAuth() {
  
             setIsLoading(true);
             
-            fetch('http://localhost:9443/auth/token/revoke', {
+            fetch(`${ou_oauth2}/auth/token/revoke/`, {
                 method: 'DELETE',
                 cache: 'no-cache',
                 headers: {
@@ -277,12 +278,12 @@ function useAuth() {
                     'client_id': 'bsi',
                     'grant_type': 'password',
                     'token': token.access_token,
-                    'client_secret': null,
+                    'client_secret': process.env.REACT_APP_BSI_CLIENT_OU_OAUTH2_SERVER_SHARED_SECRET,
                 })
             })
             .then((r) => {
                 // Example r:
-                // {type: 'cors', url: 'http://localhost:9443/auth/logout', redirected: false, status: 200, ok: true, …}
+                // {type: 'cors', url: 'https://localhost:9443/auth/logout', redirected: false, status: 200, ok: true, …}
 
                 console.log('useAuth.js:useAuth:signout:callback called');
                 console.log('useAuth.js:useAuth:signout:callback: input r = ', r);
@@ -306,7 +307,7 @@ function useAuth() {
                     });
                 } else {
                     // Example r:
-                    // {type: 'cors', url: 'http://localhost:9443/auth/logout', redirected: false, status: 400, ok: false, …}
+                    // {type: 'cors', url: 'https://localhost:9443/auth/logout', redirected: false, status: 400, ok: false, …}
                     console.log('useAuth.js:useAuth:signout:callback: Signout failed. Invalid token');
                     setToken(null);
                     reject({status: 'error', response: {message: 'Authorization server could not find token.'}});
@@ -337,7 +338,7 @@ function useAuth() {
             // Postman, but not from express. Changed to POST for now.
             // I think it is because you are not supposed to have bodies
             // on GETs.
-            fetch('http://localhost:9443/auth/token/introspect', {
+            fetch(`${ou_oauth2}/auth/token/introspect/`, {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -347,12 +348,12 @@ function useAuth() {
                     'client_id': 'bsi',
                     'grant_type': 'password',
                     'token': token.access_token,
-                    'client_secret': null,
+                    'client_secret': process.env.REACT_APP_BSI_CLIENT_OU_OAUTH2_SERVER_SHARED_SECRET,
                 })
             })
             .then((r) => {
                 // Example r:
-                // {type: 'cors', url: 'http://localhost:9443/auth/logout', redirected: false, status: 200, ok: true, …}
+                // {type: 'cors', url: 'https://orderunited.com:9443/auth/logout', redirected: false, status: 200, ok: true, …}
 
                 console.log('useAuth.js:useAuth:introspect:callback called');
                 console.log('useAuth.js:useAuth:introspect:callback: input r = ', r);
@@ -372,7 +373,7 @@ function useAuth() {
                     });
                 } else {
                     // Example r:
-                    // {type: 'cors', url: 'http://localhost:9443/auth/logout', redirected: false, status: 400, ok: false, …}
+                    // {type: 'cors', url: 'https://orderunited.com:9443/auth/logout', redirected: false, status: 400, ok: false, …}
                     console.log('useAuth.js:useAuth:introspect:callback: introspect failed. Invalid token');
                     reject({status: 'error', response: {message: 'Authorization server could not find token'}});
                 }
