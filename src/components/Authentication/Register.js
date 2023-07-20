@@ -58,9 +58,8 @@ export default function Register() {
         setAttemptResult(result);
         if (result.status === 'registered') {
           bake_cookie(global.CookieKeys.username, user.username);
-            setTimeout(()=> {
-            navigate('/signin');
-          }, 4000);
+
+          setTimeout(() => { navigate('/'); }, 4000);
         }
     })
     .catch((result) => {
@@ -117,15 +116,16 @@ export default function Register() {
           <br/>
           <button type="submit" disabled={
             attemptResult?.status === "registered" ||
+            user.username === 'tie' ||
             user.password === "" ||
             user.password !== user.confirmp}>Register</button>
           <p>Back to <Link to="/signin">Sign In</Link></p>
         </div>
       </form>
-      {!auth.isLoading && attemptResult?.status === "error" && <div className="signin-registration-issue">Registration failed.{attemptResult?.response?.message}</div>}
-      {!auth.isLoading && attemptResult?.status === "duplicate" && <div className="signin-registration-issue">Registration failed. Duplicate user.</div>}
-      {!auth.isLoading && attemptResult?.status === "registered" && <div className="signin-registration-success">Registration successful! Returning to sign in page.</div>}
-      {auth.isLoading && <div className="signin-registration-loading">Registering new user...</div>}
+      {!auth?.isLoading && attemptResult?.status === "error" && <div className="signin-registration-issue">Registration failed.{attemptResult?.response?.message}</div>}
+      {!auth?.isLoading && attemptResult?.status === "duplicate" && <div className="signin-registration-issue">Registration failed. Duplicate user.</div>}
+      {!auth?.isLoading && attemptResult?.status === "registered" && <div className="signin-registration-success">Registration successful! Returning to sign in page.</div>}
+      {auth?.isLoading && <div className="signin-registration-loading">Registering new user...</div>}
     </div>
   )
 }

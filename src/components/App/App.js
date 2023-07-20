@@ -8,10 +8,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navigate } from 'react-router-dom';
 import { AuthProvider, AuthConsumer } from '../Authentication/useAuth';
 import AppLayout from './AppLayout'
-import Home from '../Home/Home';
 import SignIn from '../Authentication/SignIn';
 import Register from '../Authentication/Register';
 import Dashboard from '../Dashboard/Dashboard';
+import NewGame from '../Play/NewGame';
 import Play from '../Play/Play';
 import Preferences from '../Preferences/Preferences';
 import Introspect from '../Authentication/Introspect';
@@ -24,24 +24,23 @@ import Introspect from '../Authentication/Introspect';
  // protected resource server.
 function RequireAuth({ children }) {
   const auth = AuthConsumer();
-  return auth?.token !== null ? children : <Navigate to='/signin' replace />;
+  return auth?.token !== null ? children : <Navigate to='/' replace />;
 }
 
 function App() {
-
   return (
     <div>
       <AuthProvider>
-      <Router basename={"/bsi"}>
+        <Router basename={"/bsi"}>
           <AppLayout>
               <Routes >
-                <Route path="/"             element={<Home />} />
-                <Route path="/signin"       element={<SignIn />} />
-                <Route path="/register"     element={<Register />} />
-                <Route path="/dashboard"    element={<RequireAuth><Dashboard /></RequireAuth>} />
-                <Route path="/play"         element={<RequireAuth><Play /></RequireAuth>} />
-                <Route path="/preferences"  element={<RequireAuth><Preferences /></RequireAuth>} />
-                <Route path="/introspect"   element={<RequireAuth><Introspect /></RequireAuth>} />
+                <Route path="/"            element={<SignIn />} />
+                <Route path="/register"    element={<Register />} />
+                <Route path="/dashboard"   element={<RequireAuth><Dashboard />   </RequireAuth>} />
+                <Route path="/newgame"     element={<RequireAuth><NewGame />     </RequireAuth>} />
+                <Route path="/play"        element={<RequireAuth><Play />        </RequireAuth>} />
+                <Route path="/preferences" element={<RequireAuth><Preferences /> </RequireAuth>} />
+                <Route path="/introspect"  element={<RequireAuth><Introspect />  </RequireAuth>} />
               </Routes>
           </AppLayout>
         </Router>

@@ -11,7 +11,6 @@ import '../App/AppCookieKeys';
 export default function SignIn() {
 
   const auth = AuthConsumer();
-
   const navigate = useNavigate();
 
   const usernameValue = read_cookie(global.CookieKeys.username);
@@ -21,10 +20,10 @@ export default function SignIn() {
   });
   const [attemptResult, setAttemptResult] = useState({});
 
-  // Called everytime any field in the form changes
+  // Called every time any field in the form changes
   const handleChange = (e) => {
 
-    setUser((prevState) => ({...prevState, [e.target.name]: e.target.value}));
+    setUser(prevState => ({...prevState, [e.target.name]: e.target.value}));
 
     if (e.target.name === 'username') {
       bake_cookie(global.CookieKeys.username, e.target.value);
@@ -48,11 +47,9 @@ export default function SignIn() {
     .then((result) => {
       setAttemptResult(result);
       if (result.status === 'signedin') {
-        // Display the success message for a few seconds (User can 
-        // manually advance if they want).
-        setTimeout(()=> {
-          navigate('/dashboard');
-        }, 1000);
+          // Display the success message for a second (User can
+          // manually advance if they want).
+          setTimeout(() => { navigate('/dashboard'); }, 1000);
       }
     })
     .catch((result) => {

@@ -15,7 +15,9 @@
 // There are a LOT of console logs. The code would be a lot shorter
 // without them.
 
-import React, { useState, useContext, createContext } from 'react';
+import React, { useState, useContext, createContext, useEffect } from 'react';
+import axios from 'axios';
+
 // Possible statuses:
 // error: any type of communication error with the authorization server
 // duplicate: user could not be registered bacause the name or email is already registered
@@ -41,7 +43,8 @@ export const AuthConsumer = () => {
     return useContext(authContext);
 }
 
-// Provider hook that creates auth object and handles state
+// Provider hook that creates auth object and handles state. It handles registration
+// signin, and adding token headers to the bsi server calls.
 function useAuth() {
 
     const [isLoading, setIsLoading] = useState(false);
@@ -49,12 +52,42 @@ function useAuth() {
 
     const ou_oauth2 = `${process.env.REACT_APP_OU_OAUTH2_SERVER_URL}:${process.env.REACT_APP_OU_OAUTH2_SERVER_PORT}`;
  
-    // const history = useHistory(); -let's us see past URLs
+    // Add authentication token to all axios based bsi server calls.
+    // Note that the interceptor needs to be ejected and renewed when the
+    // token changes. It must also be ejected when the component unloads.
+    useEffect(() => {
 
+        const resInterceptor = config => {
+            if (token != null && config?.headers != null) {
+                config.headers = {
+                ...config.headers,
+                'Authorization' : `${token.token_type} ${token.access_token}`,
+                'Pragma': 'no-cache',
+                'CacheControl': 'no-cache',
+                'Expires': 0
+                }
+                console.log("Headers = " + JSON.stringify(config?.headers));
+            }
+            return config;
+        }
+
+        const errInterceptor = error => {
+            return Promise.reject(error);
+        }
+
+        console.log("Injecting interceptor");
+        const interceptor = axios.interceptors.request.use(resInterceptor, errInterceptor);
+
+        return () => {
+            console.log("Ejecting interceptor");
+            axios.interceptors.request.eject(interceptor);
+        }
+
+    }, [token]);
+
+    // const history = useHistory(); -let's us see past URLs
     // Handy result printer
-    // r.text().then(function(data) {
-    //     console.log(data);
-    // });
+    // r.text().then(data => {console.log(data);});
 
     function register(username, eaddress, password) {
  
@@ -365,7 +398,7 @@ function useAuth() {
                         // Example result:
                         // {message: 'revoked', error: null}
                         console.log('useAuth.js:useAuth:introspect:callback: result.response = ', result.response);
-                        resolve({status: 'introspected', response: result.response,});
+                        resolve({status: 'introspected', 'token': token.access_token, response: result.response,});
                      })
                     .catch(() => {
                         console.log('useAuth.js:useAuth:introspect:callback: Result not parseable.');

@@ -23,7 +23,6 @@ export default function Introspect() {
   });
 
   // Here is an identical implementation of handleUpdate using async / await.
-  // I think I prefer ".then" myself.
   //
   // async function handleUpdate() {
   //   try {
@@ -42,8 +41,8 @@ export default function Introspect() {
   return(
     <div>
     <h2>Introspect</h2>
-    {auth?.token !== null && <button onClick={handleUpdate}>Update</button>}
-    {auth?.token !== null && <pre>{JSON.stringify(response, null, 2)}</pre>}
+      {auth?.token !== null && <button onClick={() => handleUpdate()}>Update</button>}
+      {auth?.token !== null && <pre>{JSON.stringify(response, null, 2)}</pre>}
     </div>
   );
 }

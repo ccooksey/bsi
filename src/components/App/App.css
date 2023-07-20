@@ -15,6 +15,8 @@
 }
 
 .othelloTable {
+  table-layout:fixed;
+  width: 332px; /* 40 * 8 + 2 */
   border-collapse: collapse;
   border: 2px solid pink;
   cursor: crosshair;
@@ -57,6 +59,7 @@
 
 .content-wrapper {
   width: 100%;
+  padding-top:10px;
   padding-left:100px;
   display: flex;
   flex-direction: column;
@@ -97,4 +100,27 @@ body {
   font-weight: bold;
  }
 
- 
+ .fireworks {
+  position: absolute;
+  z-index: -1;
+  width: 332px;
+  height: 332px;
+ }
+
+.result {
+  font-size:32px;
+  font-style: italic;
+  font-weight: bold;
+}
+
+.win {
+  color: #048d04;
+}
+
+.lose {
+  color: #044f8d;
+}
+
+.draw {
+  color: #8d0466;
+}

@@ -4,20 +4,20 @@
 
 import '../App/App.css';
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthConsumer } from '../Authentication/useAuth';
 
 export default function Navigation() {
 
-  // Sign out button support
-  const navigate = useNavigate();
   const auth = AuthConsumer();
+  const navigate = useNavigate();
+
+  // Sign out button support
   const handleSignOut = (() => {
     auth.signout()
     .then(() => {
       console.log('User has signed out');
-      navigate('/signin');
+      navigate('/');
     })
     .catch(() => {
       console.log('Authorization server offline. User still signed out.');
@@ -26,15 +26,12 @@ export default function Navigation() {
 
   return (
     <nav>
-      <ul>
-        <li>  <Link to='/'>Home</Link>                    </li>
-        <li>  <Link to='/signin'>Sign In</Link>           </li>
-        <li>  <Link to='/register'>Register</Link>        </li>
-        <li>  <Link to='/dashboard'>Dashboard</Link>      </li>
-        <li>  <Link to='/preferences'>Preferences</Link>  </li>
-        <li>  <Link to='/introspect'>Introspect</Link>  </li>
-      </ul>
-      {auth?.token !== null && <button onClick={handleSignOut}>Sign Out</button>}
+      {auth?.token == null && <span><Link to='/'>Sign In</Link><br/></span>}
+      {auth?.token == null && <span><Link to='/register'>Register</Link><br/></span>}
+      {auth?.token != null && <span><Link to='/dashboard'>Dashboard</Link><br/></span>}
+      {auth?.token != null && <span><Link to='/preferences'>Preferences</Link><br/></span>}
+      {auth?.token != null && <span><Link to='/introspect'>Introspect</Link><br/><br/></span>}
+      {auth?.token != null && <button onClick={() => handleSignOut()}>Sign Out</button>}
     </nav>
   );
 }

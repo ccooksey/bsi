@@ -10,30 +10,12 @@ import { AuthConsumer } from '../Authentication/useAuth';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
-// db.othello.insertOne({
-//   created: new Date(),
-//   players: ['mpotato', 'ccooksey'],
-//   colors: ['white', 'black'],
-//   gameState: [
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'W', 'B', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'B', 'W', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
-//   ],
-//   next: 'ccooksey',
-//   winner: '',
-//   gameHistory: [],
-// })
-
 export default function Dashboard() {
 
   const navigate = useNavigate();
 
   const [games, setGames] = useState(null);
+  const [roster, setRoster] = useState(null);
 
   const username = read_cookie(global.CookieKeys.username);
 
@@ -41,55 +23,109 @@ export default function Dashboard() {
 
   const auth = AuthConsumer();
 
+  // Make sure the current username is in the bsi database
+  // Ignore the result (note that the catch is not optional).
   useEffect(() => {
-    axios.get(`${bsi_server}/api/games/othello/`, {
-      headers: {
-        'Authorization': `${auth.token.token_type} ${auth.token.access_token}`,
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-      params: {
-        players: username,
-        winner: '', // Only games with no winner yet
-      }
-    })
-    .then((res) => {
-      console.log("Setting games to: ", res.data);
-      setGames(res.data);
-    })
-    .catch((err) => {
-      console.log('Could not retrieve current games: ', err);
-    });
-  }, [username, auth.token.access_token, auth.token.token_type, bsi_server]);
+    if (auth?.token != null) {
+      axios.post(`${bsi_server}/api/roster/`)
+      .catch(() => {});
+    }
+  }, [auth.token, bsi_server]);
 
-  const handleClick = (e, _id) => {
+  // Load current games user is playing
+  useEffect(() => {
+    if (auth?.token != null) {
+      axios.get(`${bsi_server}/api/games/othello/`, {
+        params: {
+          players: username,  // Only games in which user is a player
+          winner: '',         // Only games with no winner yet
+        }
+      })
+      .then((res) => {
+        setGames(res.data);
+      })
+      .catch((err) => {
+        console.log('Could not retrieve current games ', err);
+      });
+    }
+  }, [username, auth?.token, bsi_server]);
+
+  // Load opponent roster
+  useEffect(() => {
+    if (auth?.token != null) {
+      axios.get(`${bsi_server}/api/roster`, {
+        params: {
+          visible: true,      // Only visible players
+        }
+      })
+      .then((res)=> {
+        setRoster(res.data);
+      })
+      .catch((err) => {
+        console.log('Could not retrieve roster ', err);
+      });
+    }
+  }, [username, auth?.token, bsi_server]);
+
+  // Handle "Resume" click
+  const handleResume = (e, _id) => {
     e.preventDefault();
-    navigate('/play', {state: { id: _id }});
+    navigate('/play', {state: {id: _id}});
+  }
+
+  // Handle "New Game" click
+  const handleNewGame = (e, opponent) => {
+    e.preventDefault();
+    navigate('/newgame', {state: {'opponent': opponent}});
   }
 
   return (
     <div>
       <h2>Current Games</h2>
-      <table className="currentGamesTable">
-      <thead>
-          <tr>
-            <th className="currentGamesCell">Date</th>
-            <th className="currentGamesCell">Opponent</th>
-          </tr>
-        </thead>
-        <tbody>
-          {games != null && games.map((item) => {
-            return (
-              <tr key={ item._id }>
-                <td className="currentGamesCell">{ new Date(item.created).toLocaleString() }</td>
-                <td className="currentGamesCell">{ item.players[0] !== username ? item.players[0] : item.players[1] }</td>
-                <td className="currentGamesAction"><button onClick={(e) => handleClick(e, item._id)}>Resume</button></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <h3>Welcome {username}</h3>
+      {games == null ? <span>Loading games...</span> :
+        <table className="currentGamesTable">
+          <thead>
+            <tr>
+              <th className="currentGamesCell">Date</th>
+              <th className="currentGamesCell">Opponent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {games.map((item) => {
+              return (
+                <tr key={item._id}>
+                  <td className="currentGamesCell">{new Date(item.created).toLocaleString()}</td>
+                  <td className="currentGamesCell">{item.players[0] !== username ? item.players[0] : item.players[1]}</td>
+                  <td className="currentGamesAction"><button onClick={(e) => handleResume(e, item._id)}>Resume</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      }
+      <h2>Roster</h2>
+      {roster == null ? <span>Loading roster...</span> :
+        <table className="currentGamesTable">
+          <thead>
+            <tr>
+              <th className="currentGamesCell">Player</th>
+              <th className="currentGamesCell">Join Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roster.map((item) => {
+              return (
+                <tr key={item._id}>
+                  <td className="currentGamesCell">{item.username}</td>
+                  <td className="currentGamesCell">{new Date(item.joindate).toLocaleString()}</td>
+                  <td className="currentGamesAction"><button onClick={(e) => handleNewGame(e, item.username)}>New Game</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      }
     </div>
   );
 }
