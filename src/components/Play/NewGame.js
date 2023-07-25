@@ -5,18 +5,18 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { read_cookie } from 'sfcookies';
+import { AuthConsumer } from '../Authentication/useAuth';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function NewGame() {
 
+  const auth = AuthConsumer();
   const navigate = useNavigate();
+  const username = auth.username;
 
   const location = useLocation();
   const opponent = location?.state?.opponent;
-
-  const username = read_cookie(global.CookieKeys.username);
 
   const [game, setGame] = useState({
       created: new Date(),

@@ -5,12 +5,15 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { read_cookie } from 'sfcookies';
+import useWebSocket from 'react-use-websocket';
 import FireWorks from './FireWorks';
+import { AuthConsumer } from '../Authentication/useAuth';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function Play() {
+
+  const auth = AuthConsumer();
 
   const location = useLocation();
   const id = location?.state?.id;
@@ -21,7 +24,7 @@ export default function Play() {
   const [lastMove, setLastMove] = useState({'x': -1, 'y': -1});
   const [fireworks, setFireworks] = useState(false);
 
-  const username = read_cookie(global.CookieKeys.username);
+  const username = auth.username;
   const usercolor = game?.players[0] === username ? game?.colors[0] : game?.colors[1];
   const usercolorlong = usercolor === 'W' ? 'White' : 'Black';
   const opponame = game?.players[0] === username ? game?.players[1] : game?.players[0];
@@ -30,7 +33,10 @@ export default function Play() {
 
   const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
 
-  // Fetch the game we are going to play
+  // Fetch the game. Unfortunately React makes it next to impossible
+  // to use the gameUpdated and gameUpdateError functions in here. This
+  // is super frustrating because I could get the effects to play again
+  // even if the game is finished.
   useEffect(() => {
     if (id != null) {
       axios.get(`${bsi_server}/api/games/othello/${id}`)
@@ -44,31 +50,73 @@ export default function Play() {
     }
   }, [id, bsi_server]);
 
-  const handleCellClick = (e, x, y) => {
-    if (typeof e.cancelable !== "boolean" || e.cancelable) {
-      e.preventDefault();
-    }
-    if (game.winner !== '')
-      return;
-    axios.post(`${bsi_server}/api/games/othello/${id}/move/`, { bx: x, by: y })
-    .then((res) => {
-      console.log("Setting game to: ", res.data);
-      setGame(res.data);
-      setResponse('');
-      setLastMove({'x': x, 'y': y});
-      if (res.data.winner !== '') {
-        if (res.data.winner === username) {
-          setResponse('othelloWinner');
-        } else if (res.data.winner === opponame) {
-          setResponse('othelloLoser');
-        } else if (res.data.winner === 'tie') {
-          setResponse('othelloTie');
+  // Websocket
+  const typesDef = {
+    AUTHORIZATION: 'authorization',
+    GAME_UPDATE: 'gameUpdated'
+  }
+
+  // Open a shareable websocket and send the auth token to it
+  const bsi_ws_server = `${process.env.REACT_APP_BSI_SERVER_WS_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
+  const { sendJsonMessage } = useWebSocket(bsi_ws_server, {
+    onOpen: () => {
+      console.log('Play.js: onOpen: websocket connection established.');
+      console.log('Play.js: onOpen: websocket sending auth token.');
+      sendJsonMessage({
+        type: typesDef.AUTHORIZATION,
+        token: `${auth.token.token_type} ${auth.token.access_token}`
+      });
+    },
+    onMessage: (message) => {
+      console.log('Play.js: onMessage: message.data ' + message.data);
+      const object = JSON.parse(message.data);
+      if (object.type === typesDef.GAME_UPDATE) {
+        // Fetch and display new game state.
+        if (id != null) {
+          axios.get(`${bsi_server}/api/games/othello/${id}`)
+          .then((res) => {
+            gameUpdated(res.data);
+          })
+          .catch((err) => {
+            gameUpdateError(err);
+          });
         }
-        playReward(res.data.winner, 7);
       }
-    })
-    .catch((err) => {
-      // We'll consolidate different error domains to simplify
+    },
+    share: true,
+    // Haven't researched any of these yet:
+    filter: () => false,
+    retryOnError: true,
+    shouldReconnect: () => true
+  });
+
+  // Called any time the game state is successfully loaded OR updated
+  // due to either player entering a legal move.
+  const gameUpdated = (game, mover) => {
+    setGame(game);
+    console.log("mover: " + mover);
+    console.log("username: " + username);
+    setResponse('');
+    // Pseudo responses not explicitly set by server (maybe they should be)
+    if (mover !== username) {
+      setResponse('othelloOpponentMoved');
+    }
+    if (game.winner !== '') {
+      if (game.winner === username) {
+        setResponse('othelloWinner');
+      } else if (game.winner === opponame) {
+        setResponse('othelloLoser');
+      } else if (game.winner === 'tie') {
+        setResponse('othelloTie');
+      }
+      playReward(game.winner, 7);
+    }
+  }
+
+  // Called any time the game state failed to load OR the current
+  // user attempted an illegal move.
+  const gameUpdateError = (err) => {
+    // We'll consolidate different error domains to simplify
       // user notification.
       console.log('Could not execute move: ', err);
       if (err?.response?.data?.othelloMoveError != null) {
@@ -80,6 +128,22 @@ export default function Play() {
       } else {
         setResponse('An unknown error has occurred.');
       }
+  }
+
+  // User tried to make a move.
+  const handleCellClick = (e, x, y) => {
+    if (typeof e.cancelable !== "boolean" || e.cancelable) {
+      e.preventDefault();
+    }
+    if (game.winner !== '')
+      return;
+    axios.post(`${bsi_server}/api/games/othello/${id}/move/`, { bx: x, by: y })
+    .then((res) => {
+      setLastMove({x, y});
+      gameUpdated(res.data, username);
+    })
+    .catch((err) => {
+      gameUpdateError(err);
     });
   }
 
@@ -145,11 +209,15 @@ export default function Play() {
       case 'othelloTerminatingCellNotPresent':
         return "That move would capture no pieces.";
 
+      // Special case
+      case 'othelloOpponentMoved':
+        return "It is your turn.";
+
       // Othello game result domain
       case 'othelloWinner':
         return "You have won!";
       case 'othelloLoser':
-        return "You lost. Try a rematch!";
+        return "You lost. Try again!";
       case 'othelloTie':
         return "It's a draw!";
 
@@ -164,7 +232,13 @@ export default function Play() {
 
   const nextPlayerText = () => {
     if (game?.winner === '') {
-      return <p><strong>Next move:</strong> {game?.next} playing {game?.players[0] === username ? usercolorlong : oppocolorlong}</p>
+      if (game?.next === username) {
+        return <p><strong>Next move:</strong> you are next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
+      } else if (game?.next === opponame) {
+        return <p><strong>Next move:</strong> {game?.next} is next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
+      } else {
+        return <p><strong>Next move:</strong> Game progression error. It is unknown who is next.</p>
+      }
     }
     return null;
   }
@@ -190,6 +264,7 @@ export default function Play() {
   return (
     <div>
       <h2>Play</h2>
+      <p>Welcome {username}. You are playing {usercolorlong}.</p>
       <p><strong>{game?.players[0]}</strong> vs <strong>{game?.players[1]}</strong></p>
       <FireWorks enabled={fireworks ? "true" : "false"}></FireWorks>
       <table className="othelloTable">

@@ -49,6 +49,7 @@ function useAuth() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [token, setToken] = useState(null);
+    const [username, setUsername] = useState(null);
 
     const ou_oauth2 = `${process.env.REACT_APP_OU_OAUTH2_SERVER_URL}:${process.env.REACT_APP_OU_OAUTH2_SERVER_PORT}`;
  
@@ -63,7 +64,7 @@ function useAuth() {
                 ...config.headers,
                 'Authorization' : `${token.token_type} ${token.access_token}`,
                 'Pragma': 'no-cache',
-                'CacheControl': 'no-cache',
+                'Cache-Control': 'no-cache',
                 'Expires': 0
                 }
                 console.log("Headers = " + JSON.stringify(config?.headers));
@@ -197,6 +198,7 @@ function useAuth() {
                         // {token_type: 'bearer', access_token: 'f024003bc4177fce4d865ed66f79637d489d88c5', expires_in: 3600}}
                         console.log('useAuth.js:useAuth:signin:callback: token = ', token);
                         setToken(token);
+                        setUsername(username);
                         resolve({status: 'signedin'});
                     })
                     .catch(() => {
@@ -425,6 +427,7 @@ function useAuth() {
     return {
         isLoading,
         token,
+        username,
         register,
         signin,
         autoSignin,

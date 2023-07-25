@@ -16,24 +16,25 @@ import Play from '../Play/Play';
 import Preferences from '../Preferences/Preferences';
 import Introspect from '../Authentication/Introspect';
 
- // Wrap protected routes in this component. If the client has a valid token
- // it will allow navigation to protected pages. Note that any enforcement
- // in the client can be circumvented in the developer console so it does
- // not need to be particularly robust here. On the other hand, resources that
- // should only be seen by an authorized user must be served from a separate
- // protected resource server.
+// Wrap protected routes in this component. If the client has a valid token
+// it will allow navigation to protected pages. Note that any enforcement
+// in the client can be circumvented in the developer console so it does
+// not need to be particularly robust here. On the other hand, resources that
+// should only be seen by an authorized user must be served from a separate
+// protected resource server.
 function RequireAuth({ children }) {
   const auth = AuthConsumer();
   return auth?.token !== null ? children : <Navigate to='/' replace />;
 }
 
 function App() {
+
   return (
     <div>
       <AuthProvider>
         <Router basename={"/bsi"}>
           <AppLayout>
-              <Routes >
+              <Routes>
                 <Route path="/"            element={<SignIn />} />
                 <Route path="/register"    element={<Register />} />
                 <Route path="/dashboard"   element={<RequireAuth><Dashboard />   </RequireAuth>} />

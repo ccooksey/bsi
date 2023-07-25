@@ -5,23 +5,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { read_cookie } from 'sfcookies';
 import { AuthConsumer } from '../Authentication/useAuth';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function Dashboard() {
 
+  const auth = AuthConsumer();
   const navigate = useNavigate();
+  const username = auth.username;
 
   const [games, setGames] = useState(null);
   const [roster, setRoster] = useState(null);
 
-  const username = read_cookie(global.CookieKeys.username);
-
   const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
-
-  const auth = AuthConsumer();
 
   // Make sure the current username is in the bsi database
   // Ignore the result (note that the catch is not optional).
@@ -82,7 +79,7 @@ export default function Dashboard() {
   return (
     <div>
       <h2>Current Games</h2>
-      <h3>Welcome {username}</h3>
+      <p>Welcome {username}</p>
       {games == null ? <span>Loading games...</span> :
         <table className="currentGamesTable">
           <thead>
