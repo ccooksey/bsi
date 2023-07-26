@@ -13,11 +13,11 @@ export default function Register() {
   const auth = AuthConsumer();
   const navigate = useNavigate();
 
-  const usernameValue = read_cookie(global.CookieKeys.reginame);
-  const eaddressValue = read_cookie(global.CookieKeys.eaddress);
+  const username = read_cookie(global.CookieKeys.reginame);
+  const eaddress = read_cookie(global.CookieKeys.eaddress);
   const [user, setUser] = useState({
-    username: usernameValue,
-    eaddress: eaddressValue,
+    username: username,
+    eaddress: eaddress,
     password: '',
     confirmp: '',
   });
@@ -25,15 +25,13 @@ export default function Register() {
 
   // Called everytime any field in the form changes
   const handleChange = (e) => {
-
-    setUser((prevState) => ({...prevState, [e.target.name]: e.target.value}));
-
     if (e.target.name === 'username') {
       bake_cookie(global.CookieKeys.reginame, e.target.value);
     }
     if (e.target.name === 'eaddress') {
       bake_cookie(global.CookieKeys.eaddress, e.target.value);
     }
+    setUser((prevState) => ({...prevState, [e.target.name]: e.target.value}));
   }
 
   // Called when the form is submitted

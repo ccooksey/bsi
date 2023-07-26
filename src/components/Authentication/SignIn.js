@@ -13,21 +13,19 @@ export default function SignIn() {
   const auth = AuthConsumer();
   const navigate = useNavigate();
 
-  const usernameValue = read_cookie(global.CookieKeys.username);
+  const username = read_cookie(global.CookieKeys.username);
   const [user, setUser] = useState({
-    username: usernameValue,
+    username: username,
     password: '',
   });
   const [attemptResult, setAttemptResult] = useState({});
 
   // Called every time any field in the form changes
   const handleChange = (e) => {
-
-    setUser(prevState => ({...prevState, [e.target.name]: e.target.value}));
-
     if (e.target.name === 'username') {
       bake_cookie(global.CookieKeys.username, e.target.value);
     }
+    setUser(prevState => ({...prevState, [e.target.name]: e.target.value}));
   }
 
   // Called when the form is submitted
