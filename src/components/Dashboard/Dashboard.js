@@ -17,6 +17,7 @@ export default function Dashboard() {
 
   const [games, setGames] = useState(null);
   const [roster, setRoster] = useState(null);
+  const [previousGames, setPreviousGames] = useState(null);
 
   const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
 
@@ -34,8 +35,8 @@ export default function Dashboard() {
     if (auth?.token != null) {
       axios.get(`${bsi_server}/api/games/othello/`, {
         params: {
-          players: username,  // Only games in which user is a player
-          winner: '',         // Only games with no winner yet
+          players: username,      // Only games in which user is a player
+          winner: '',             // Only games with no winner yet
         }
       })
       .then((res) => {
@@ -52,7 +53,7 @@ export default function Dashboard() {
     if (auth?.token != null) {
       axios.get(`${bsi_server}/api/roster`, {
         params: {
-          visible: true,      // Only visible players
+          visible: true,          // Only visible players
         }
       })
       .then((res)=> {
@@ -60,6 +61,24 @@ export default function Dashboard() {
       })
       .catch((err) => {
         console.log('Could not retrieve roster ', err);
+      });
+    }
+  }, [username, auth?.token, bsi_server]);
+
+  // Load previous games user has played
+  useEffect(() => {
+    if (auth?.token != null) {
+      axios.get(`${bsi_server}/api/games/othello/`, {
+        params: {
+          players: username,      // Only games in which user is a player
+          winner: {'$gte': ' '},  // Only games with a winner
+        }
+      })
+      .then((res) => {
+        setPreviousGames(res.data);
+      })
+      .catch((err) => {
+        console.log('Could not retrieve previous games ', err);
       });
     }
   }, [username, auth?.token, bsi_server]);
@@ -76,47 +95,79 @@ export default function Dashboard() {
     navigate('/newgame', {state: {'opponent': opponent}});
   }
 
+  // Handle "Replay" click
+  const handleReplay = (e, opponent) => {
+    e.preventDefault();
+//    navigate('/newgame', {state: {'opponent': opponent}});
+  }
+
   return (
     <div>
-      <h2>Current Games</h2>
-      <p>Welcome {username}</p>
+      <h2>Dashboard for {username}</h2>
+      <h3>Current Games</h3>
       {games == null ? <span>Loading games...</span> :
-        <table className="currentGamesTable">
+        <table className="dashboard highlight roundedbg">
           <thead>
             <tr>
-              <th className="currentGamesCell">Date</th>
-              <th className="currentGamesCell">Opponent</th>
+              <th>Opponent</th>
+              <th>Date</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {games.map((item) => {
               return (
                 <tr key={item._id}>
-                  <td className="currentGamesCell">{new Date(item.created).toLocaleString()}</td>
-                  <td className="currentGamesCell">{item.players[0] !== username ? item.players[0] : item.players[1]}</td>
-                  <td className="currentGamesAction"><button onClick={(e) => handleResume(e, item._id)}>Resume</button></td>
+                  <td>{item.players[0] !== username ? item.players[0] : item.players[1]}</td>
+                  <td>{new Date(item.created).toLocaleString(undefined, {dateStyle: 'short', timeStyle: 'short'})}</td>
+                  <td><button onClick={(e) => handleResume(e, item._id)}>Resume</button></td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       }
-      <h2>Roster</h2>
+      <h3>Roster</h3>
       {roster == null ? <span>Loading roster...</span> :
-        <table className="currentGamesTable">
+        <table className="dashboard highlight roundedbg">
           <thead>
             <tr>
-              <th className="currentGamesCell">Player</th>
-              <th className="currentGamesCell">Join Date</th>
+              <th>Player</th>
+              <th>Join Date</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {roster.map((item) => {
               return (
                 <tr key={item._id}>
-                  <td className="currentGamesCell">{item.username}</td>
-                  <td className="currentGamesCell">{new Date(item.joindate).toLocaleString()}</td>
-                  <td className="currentGamesAction"><button onClick={(e) => handleNewGame(e, item.username)}>New Game</button></td>
+                  <td>{item.username}</td>
+                  <td>{new Date(item.joindate).toLocaleString(undefined, {dateStyle: 'short', timeStyle: 'short'})}</td>
+                  <td><button onClick={(e) => handleNewGame(e, item.username)}>New Game</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      }
+      <h3>Previous Games</h3>
+      {previousGames == null ? <span>Loading previous games...</span> :
+        <table className="dashboard highlight roundedbg">
+          <thead>
+            <tr>
+              <th>Opponent</th>
+              <th>Game Date</th>
+              <th>Winner</th>
+            </tr>
+          </thead>
+          <tbody>
+            {previousGames.map((item) => {
+              return (
+                <tr key={item._id}>
+                  <td>{item.players[0] !== username ? item.players[0] : item.players[1]}</td>
+                  <td>{new Date(item.created).toLocaleString(undefined, {dateStyle: 'short', timeStyle: 'short'})}</td>
+                  <td>{item.winner}</td>
+                  {/* <td><button onClick={(e) => handleReplay(e, item.username)}>Replay</button></td> */}
                 </tr>
               );
             })}

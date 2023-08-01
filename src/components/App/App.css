@@ -2,23 +2,86 @@
 /* Copyright 2023 Chris Cooksey                                              */
 /*---------------------------------------------------------------------------*/
 
-.currentGamesTable {
-  border-collapse: collapse;
-}
-.currentGamesCell {
-  border-collapse: collapse;
-  border: 2px solid black;
-  padding: 10px;
-}
-.currentGamesAction {
-  padding: 10px;
+table.dashboard {
+  --border: 1px solid black;
+  border-radius: 10px;
+
+  background: rgb(230, 230, 230);
+  color: rgb(0,0,0);
+  border-spacing: 0;
+  border-collapse: separate;
+  border: var(--border);
+  overflow: hidden;
 }
 
+table.dashboard th,
+table.dashboard td {
+  text-align: left;
+  padding: 5px;
+  padding-left: 20px;
+  padding-right: 20px;
+  border: 0;
+}
+
+table.dashboard.highlight th {
+  background: rgb(180, 180, 190);
+}
+
+table.dashboard.roundedbg {
+  overflow: hidden;
+}
+table.dashboard.roundedbg tr:hover th,
+table.dashboard.roundedbg tr:hover td {
+  background: rgba(128, 128, 128, 0.2);
+}
+
+/* Apply a border to the right of all but the last column */
+table.dashboard th:not(:last-child),
+table.dashboard td:not(:last-child) {
+  border-right: var(--border);
+}
+
+/* Apply a border to the bottom of all but the last row */
+table.dashboard>thead>tr>th,
+table.dashboard>thead>tr>td,
+table.dashboard>tbody>tr:not(:last-child)>th,
+table.dashboard>tbody>tr:not(:last-child)>td,
+
+table.dashboard>tfoot>tr:not(:last-child)>th,
+table.dashboard>tfoot>tr:not(:last-child)>td,
+table.dashboard>tr:not(:last-child)>th,
+table.dashboard>tr:not(:last-child)>td,
+table.dashboard>thead:not(:last-child),
+table.dashboard>tbody:not(:last-child),
+table.dashboard>tfoot:not(:last-child) {
+  border-bottom: var(--border);
+}
+
+/* Get everything juust right */
+table.dashboard th:not(:last-child),
+table.dashboard th:not(:first-child) {
+  width: 200px;
+}
+table.dashboard th:first-child {
+  width: 120px;
+}
+table.dashboard th:last-child {
+  width: 100px;
+}
+table.dashboard td:last-child {
+  text-align: center;
+}
+table.dashboard td {
+  font-family: monospace;
+  font-size: 125%;
+}
+
+/* Othello game grid */
 .othelloTable {
   table-layout:fixed;
   width: 332px; /* 40 * 8 + 2 */
   border-collapse: collapse;
-  border: 2px solid pink;
+  border: 1px solid pink;
   cursor: crosshair;
 }
 
@@ -61,6 +124,7 @@
   width: 100%;
   padding-top:10px;
   padding-left:100px;
+  padding-bottom:20px;
   display: flex;
   flex-direction: column;
   align-items: left;
