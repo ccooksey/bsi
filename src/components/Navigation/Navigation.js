@@ -2,19 +2,25 @@
 // Copyright 2023 Chris Cooksey
 //-----------------------------------------------------------------------------
 
-import '../App/App.css';
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthConsumer } from '../Authentication/useAuth';
+import { BSIConsumer } from '../App/useBSI';
+import '../App/App.css';
 
 export default function Navigation() {
 
   const auth = AuthConsumer();
+  const bsi = BSIConsumer();
   const navigate = useNavigate();
 
   // Sign out button support
   const handleSignOut = (() => {
-    auth.signout()
+    bsi.removePresence()
+    .then(() => {
+      console.log('User presence removed');
+      auth.signout();
+    })
     .then(() => {
       console.log('User has signed out');
       navigate('/');

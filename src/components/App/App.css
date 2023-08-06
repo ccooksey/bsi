@@ -76,10 +76,35 @@ table.dashboard td {
   font-size: 125%;
 }
 
+/* Layout of various components of the play view */
+.token {
+  --cellSize: 40px;
+  display: inline-block;
+  width: var(--cellSize);
+  height: var(--cellSize);
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0;
+}
+
+.token.adorn {
+  width: calc(var(--cellSize) / 1.5);
+  height: calc(var(--cellSize) / 1.5);
+  vertical-align: middle;
+}
+
+.welcome {
+  display: inline-block;
+  line-height: var(--cellSize);
+  vertical-align: middle;
+  margin-top: 0;
+  }
+
 /* Othello game grid */
 .othelloTable {
-  table-layout:fixed;
-  width: 332px; /* 40 * 8 + 2 */
+  table-layout: fixed;
+  /* width: calc(var(--cellSize) * 8); Does not work with tables. */
+  width: 330px;
   border-collapse: collapse;
   border: 1px solid pink;
   cursor: crosshair;
@@ -87,16 +112,11 @@ table.dashboard td {
 
 /* Cells will be exactly width * 2 x height * 2 (retina?). */
 /* Borders are drawn outside, 0.5 * 2 * 2, i.e. 2 px wide. */
-.othelloCell {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  white-space: nowrap;
-  overflow: hidden;
+.token.othello {
   border: 0.5px solid black;
-  padding: 0;
   background-color: #20C020;
 }
+
 
 .layout-wrapper {
   padding-top:10px;

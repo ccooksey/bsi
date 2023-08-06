@@ -21,21 +21,11 @@ export default function Dashboard() {
 
   const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
 
-  // Make sure the current username is in the bsi database
-  // Ignore the result (note that the catch is not optional).
-  useEffect(() => {
-    if (auth?.token != null) {
-      axios.post(`${bsi_server}/api/roster/`)
-      .catch(() => {});
-    }
-  }, [auth.token, bsi_server]);
-
-  // Load current games user is playing
+  // Load current games user is playing (game server will add the player name)
   useEffect(() => {
     if (auth?.token != null) {
       axios.get(`${bsi_server}/api/games/othello/`, {
         params: {
-          players: username,      // Only games in which user is a player
           winner: '',             // Only games with no winner yet
         }
       })
@@ -65,12 +55,11 @@ export default function Dashboard() {
     }
   }, [username, auth?.token, bsi_server]);
 
-  // Load previous games user has played
+  // Load previous games user has played (game server will add the player name)
   useEffect(() => {
     if (auth?.token != null) {
       axios.get(`${bsi_server}/api/games/othello/`, {
         params: {
-          players: username,      // Only games in which user is a player
           winner: {'$gte': ' '},  // Only games with a winner
         }
       })
@@ -95,11 +84,11 @@ export default function Dashboard() {
     navigate('/newgame', {state: {'opponent': opponent}});
   }
 
-  // Handle "Replay" click
-  const handleReplay = (e, opponent) => {
-    e.preventDefault();
-//    navigate('/newgame', {state: {'opponent': opponent}});
-  }
+//   // Handle "Replay" click
+//   const handleReplay = (e, opponent) => {
+//     e.preventDefault();
+// //    navigate('/newgame', {state: {'opponent': opponent}});
+//   }
 
   return (
     <div>

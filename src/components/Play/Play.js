@@ -2,18 +2,19 @@
 // Copyright 2023 Chris Cooksey
 //-----------------------------------------------------------------------------
 
+//import React, { useCallback, useState, useEffect } from 'react';
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import axios from 'axios';
-import useWebSocket from 'react-use-websocket';
 import FireWorks from './FireWorks';
 import { AuthConsumer } from '../Authentication/useAuth';
+import { BSIConsumer } from '../App/useBSI';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function Play() {
 
   const auth = AuthConsumer();
+  const bsi = BSIConsumer();
 
   const location = useLocation();
   const id = location?.state?.id;
@@ -21,7 +22,7 @@ export default function Play() {
 
   const [game, setGame] = useState(null);
   const [response, setResponse] = useState(null);
-  const [lastMove, setLastMove] = useState({'x': -1, 'y': -1});
+  const [lastMove, setLastMove] = useState({x: -1, y: -1});
   const [fireworks, setFireworks] = useState(false);
 
   const username = auth.username;
@@ -31,15 +32,10 @@ export default function Play() {
   const oppocolor = usercolor === 'W' ? 'B' : 'W';
   const oppocolorlong = oppocolor === 'W' ? 'White' : 'Black';
 
-  const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
-
-  // Fetch the game. Unfortunately React makes it next to impossible
-  // to use the gameUpdated and gameUpdateError functions in here. This
-  // is super frustrating because I could get the effects to play again
-  // even if the game is finished.
+  // Fetch the game
   useEffect(() => {
     if (id != null) {
-      axios.get(`${bsi_server}/api/games/othello/${id}`)
+      bsi.getGame(id)
       .then((res) => {
         console.log("Setting game to: ", res.data);
         setGame(res.data);
@@ -48,73 +44,44 @@ export default function Play() {
         console.log('Could not retrieve requested game: ', err);
       });
     }
-  }, [id, bsi_server]);
+  }, [id, bsi]);
 
-  // Websocket
-  const typesDef = {
-    AUTHORIZATION: 'authorization',
-    GAME_UPDATE: 'gameUpdated'
-  }
-
-  // Open a shareable websocket and send the auth token to it
-  const bsi_ws_server = `${process.env.REACT_APP_BSI_SERVER_WS_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
-  const { sendJsonMessage } = useWebSocket(bsi_ws_server, {
-    onOpen: () => {
-      console.log('Play.js: onOpen: websocket connection established.');
-      console.log('Play.js: onOpen: websocket sending auth token.');
-      sendJsonMessage({
-        type: typesDef.AUTHORIZATION,
-        token: `${auth.token.token_type} ${auth.token.access_token}`
+  // Redraw the game if change was indicated on websocket
+  useEffect(() => {
+    if (id != null) {
+      bsi.getGame(id)
+      .then((res) => {
+        gameUpdated(res.data, username, opponame); // Omit mover to make self-testing work better
+      })
+      .catch((err) => {
+        gameUpdateError(err);
       });
-    },
-    onMessage: (message) => {
-      console.log('Play.js: onMessage: message.data ' + message.data);
-      const object = JSON.parse(message.data);
-      if (object.type === typesDef.GAME_UPDATE) {
-        // Fetch and display new game state.
-        if (id != null) {
-          axios.get(`${bsi_server}/api/games/othello/${id}`)
-          .then((res) => {
-            gameUpdated(res.data);
-          })
-          .catch((err) => {
-            gameUpdateError(err);
-          });
-        }
-      }
-    },
-    share: true,
-    // Haven't researched any of these yet:
-    filter: () => false,
-    retryOnError: true,
-    shouldReconnect: () => true
-  });
+    }
+  }, [id, bsi, username, opponame, bsi.gameUpdated]);
 
   // Called any time the game state is successfully loaded OR updated
   // due to either player entering a legal move.
-  const gameUpdated = (game, mover) => {
+  const gameUpdated = (game, username, opponame, mover) => {
     setGame(game);
-    console.log("mover: " + mover);
-    console.log("username: " + username);
     setResponse('');
-    // Pseudo responses not explicitly set by server (maybe they should be)
     if (mover !== username) {
       setResponse('othelloOpponentMoved');
     }
     if (game.winner !== '') {
       if (game.winner === username) {
         setResponse('othelloWinner');
+        setFireworks(true);
+        setTimeout(() => setFireworks(false), 7 * 1000);
       } else if (game.winner === opponame) {
         setResponse('othelloLoser');
       } else if (game.winner === 'tie') {
         setResponse('othelloTie');
       }
-      playReward(game.winner, 7);
     }
   }
 
   // Called any time the game state failed to load OR the current
-  // user attempted an illegal move.
+  // user attempted an invalid move.
   const gameUpdateError = (err) => {
     // We'll consolidate different error domains to simplify
       // user notification.
@@ -137,23 +104,14 @@ export default function Play() {
     }
     if (game.winner !== '')
       return;
-    axios.post(`${bsi_server}/api/games/othello/${id}/move/`, { bx: x, by: y })
+    bsi.makeMove(id, {x, y})
     .then((res) => {
       setLastMove({x, y});
-      gameUpdated(res.data, username);
+      gameUpdated(res.data, username, opponame, username);
     })
     .catch((err) => {
       gameUpdateError(err);
     });
-  }
-
-  const playReward = (winner, duration) => {
-    if (winner === username) {
-      setFireworks(true);
-      setTimeout(()=>{setFireworks(false);}, duration * 1000);
-    } else if (winner === opponame) {
-    } else if (winner === 'tie') {
-    }
   }
 
   const goodMove = () => {
@@ -172,17 +130,6 @@ export default function Play() {
       case 5: return "You've got them on the run now."
       default: return null;
     }
-  }
-
-  const renderToken = (token) => {
-    if (token==='E')
-      return "";
-    return (
-      <svg width="100%" height="100%">
-        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
-         fill={token==='W' ? "white" : "black"} />
-      </svg>
-    )
   }
 
   const translateResponse = () => {
@@ -243,6 +190,19 @@ export default function Play() {
     return null;
   }
 
+  const welcomeText = () => {
+    return <p className="welcome">Welcome {username}. You are playing:&nbsp;&nbsp;<span className="token adorn">{renderToken(usercolor)}</span></p>
+  }
+
+  const playReward = (winner, username, opponame, duration) => {
+    if (winner === username) {
+      setFireworks(true);
+      setTimeout(() => setFireworks(false), duration * 1000);
+    } else if (winner === opponame) {
+    } else if (winner === 'tie') {
+    }
+  }
+
   const resultText = (winner) => {
     if (winner == null) {
       return null;
@@ -258,14 +218,25 @@ export default function Play() {
     } else if (winner === 'tie') {
       style = "result draw";
     }
-    return <p className={style} onClick={() => playReward(game?.winner, 10)}>{translateResponse()}</p>
+    return <p className={style} onClick={() => playReward(game?.winner, username, opponame, 10)}>{translateResponse()}</p>
+  }
+
+  const renderToken = (token) => {
+    if (token==='E')
+      return "";
+    return (
+      <svg width="100%" height="100%">
+        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
+         fill={token==='W' ? "white" : "black"} />
+      </svg>
+    )
   }
 
   return (
     <div>
       <h2>Play</h2>
-      <p>Welcome {username}. You are playing {usercolorlong}.</p>
       <p><strong>{game?.players[0]}</strong> vs <strong>{game?.players[1]}</strong></p>
+      {welcomeText()}
       <FireWorks enabled={fireworks ? "true" : "false"}></FireWorks>
       <table className="othelloTable">
         <tbody>
@@ -274,7 +245,7 @@ export default function Play() {
               <tr key={y}>
                 {rows != null && rows.map((cells, x) => {
                   return (
-                    <td key={x} className="othelloCell" onClick={(e) => handleCellClick(e, x, y)}>
+                    <td key={x} className="token othello" onClick={(e) => handleCellClick(e, x, y)}>
                       {renderToken(cells)}
                     </td>
                   )})

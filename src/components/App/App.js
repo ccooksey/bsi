@@ -2,11 +2,11 @@
 // Copyright 2023 Chris Cooksey
 //-----------------------------------------------------------------------------
 
-import './App.css';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navigate } from 'react-router-dom';
 import { AuthProvider, AuthConsumer } from '../Authentication/useAuth';
+import { BSIProvider } from './useBSI';
 import AppLayout from './AppLayout'
 import SignIn from '../Authentication/SignIn';
 import Register from '../Authentication/Register';
@@ -15,6 +15,7 @@ import NewGame from '../Play/NewGame';
 import Play from '../Play/Play';
 import Preferences from '../Preferences/Preferences';
 import Introspect from '../Authentication/Introspect';
+import './App.css';
 
 // Wrap protected routes in this component. If the client has a valid token
 // it will allow navigation to protected pages. Note that any enforcement
@@ -32,6 +33,7 @@ function App() {
   return (
     <div>
       <AuthProvider>
+      <BSIProvider>
         <Router basename={"/bsi"}>
           <AppLayout>
               <Routes>
@@ -45,6 +47,7 @@ function App() {
               </Routes>
           </AppLayout>
         </Router>
+      </BSIProvider>
       </AuthProvider>
     </div>
   );

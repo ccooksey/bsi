@@ -51,7 +51,7 @@ export default function Register() {
     // switching sooner). Note that we remember the new user name in the username
     // cookie and will show that on the signin screen.
     setAttemptResult({});
-    auth.register(user.username, user.eaddress, user.password)
+    auth.register(user.username.toLowerCase(), user.eaddress.toLowerCase(), user.password)
     .then((result) => {
         setAttemptResult(result);
         if (result.status === 'registered') {

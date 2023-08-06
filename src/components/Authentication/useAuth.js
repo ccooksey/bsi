@@ -15,8 +15,7 @@
 // There are a LOT of console logs. The code would be a lot shorter
 // without them.
 
-import React, { useState, useContext, createContext, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useContext, createContext } from 'react';
 
 // Possible statuses:
 // error: any type of communication error with the authorization server
@@ -53,39 +52,6 @@ function useAuth() {
 
     const ou_oauth2 = `${process.env.REACT_APP_OU_OAUTH2_SERVER_URL}:${process.env.REACT_APP_OU_OAUTH2_SERVER_PORT}`;
  
-    // Add authentication token to all axios based bsi server calls.
-    // Note that the interceptor needs to be ejected and renewed when the
-    // token changes. It must also be ejected when the component unloads.
-    useEffect(() => {
-
-        const resInterceptor = config => {
-            if (token != null && config?.headers != null) {
-                config.headers = {
-                ...config.headers,
-                'Authorization' : `${token.token_type} ${token.access_token}`,
-                'Pragma': 'no-cache',
-                'Cache-Control': 'no-cache',
-                'Expires': 0
-                }
-                console.log("Headers = " + JSON.stringify(config?.headers));
-            }
-            return config;
-        }
-
-        const errInterceptor = error => {
-            return Promise.reject(error);
-        }
-
-        console.log("Injecting interceptor");
-        const interceptor = axios.interceptors.request.use(resInterceptor, errInterceptor);
-
-        return () => {
-            console.log("Ejecting interceptor");
-            axios.interceptors.request.eject(interceptor);
-        }
-
-    }, [token]);
-
     // const history = useHistory(); -let's us see past URLs
     // Handy result printer
     // r.text().then(data => {console.log(data);});

@@ -39,15 +39,13 @@ export default function SignIn() {
     // will trigger a redraw to show the "loading" text in the jsx. Setting
     // the attemptResult will trigger another redraw and the jsx below will
     // display the results of the signin attempt. If it was successful the
-    // code below will wait a few seconds then send us to a landing page.
+    // code below will wait a moment then send us to a landing page.
     setAttemptResult({});
-    auth.signin(user.username, user.password)
+    auth.signin(user.username.toLowerCase(), user.password)
     .then((result) => {
       setAttemptResult(result);
       if (result.status === 'signedin') {
-          // Display the success message for a second (User can
-          // manually advance if they want).
-          setTimeout(() => { navigate('/dashboard'); }, 1000);
+        setTimeout(() => { navigate('/dashboard'); }, 1000);
       }
     })
     .catch((result) => {
