@@ -4,14 +4,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { AuthConsumer } from '../Authentication/useAuth';
+import { BSIConsumer } from '../App/useBSI';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function Dashboard() {
 
   const auth = AuthConsumer();
+  const bsi = BSIConsumer();
   const navigate = useNavigate();
   const username = auth.username;
 
@@ -19,58 +20,32 @@ export default function Dashboard() {
   const [roster, setRoster] = useState(null);
   const [previousGames, setPreviousGames] = useState(null);
 
-  const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
-
   // Load current games user is playing (game server will add the player name)
   useEffect(() => {
     if (auth?.token != null) {
-      axios.get(`${bsi_server}/api/games/othello/`, {
-        params: {
-          winner: '',             // Only games with no winner yet
-        }
-      })
-      .then((res) => {
-        setGames(res.data);
-      })
-      .catch((err) => {
-        console.log('Could not retrieve current games ', err);
-      });
+      bsi.getGames()
+      .then(res => setGames(res.data))
+      .catch(err => console.log('Could not retrieve current games ', err));
     }
-  }, [username, auth?.token, bsi_server]);
+  }, [auth.token, bsi]);
 
   // Load opponent roster
   useEffect(() => {
     if (auth?.token != null) {
-      axios.get(`${bsi_server}/api/roster`, {
-        params: {
-          visible: true,          // Only visible players
-        }
-      })
-      .then((res)=> {
-        setRoster(res.data);
-      })
-      .catch((err) => {
-        console.log('Could not retrieve roster ', err);
-      });
+      bsi.getRoster()
+      .then(res=> setRoster(res.data))
+      .catch(err => console.log('Could not retrieve roster ', err));
     }
-  }, [username, auth?.token, bsi_server]);
+  }, [auth.token, bsi]);
 
   // Load previous games user has played (game server will add the player name)
   useEffect(() => {
     if (auth?.token != null) {
-      axios.get(`${bsi_server}/api/games/othello/`, {
-        params: {
-          winner: {'$gte': ' '},  // Only games with a winner
-        }
-      })
-      .then((res) => {
-        setPreviousGames(res.data);
-      })
-      .catch((err) => {
-        console.log('Could not retrieve previous games ', err);
-      });
+      bsi.getPreviousGames()
+      .then(res => setPreviousGames(res.data))
+      .catch(err => console.log('Could not retrieve previous games ', err));
     }
-  }, [username, auth?.token, bsi_server]);
+  }, [auth.token, bsi]);
 
   // Handle "Resume" click
   const handleResume = (e, _id) => {

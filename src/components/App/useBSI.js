@@ -37,7 +37,8 @@ function useBSI() {
     const auth = AuthConsumer();    
 
     const [intercepting, setIntercepting] = useState(false);
-    const [gameUpdated, setGameUpdated] = useState(0); // Increment to signal game state changed
+    const [gameUpdated, setGameUpdated] = useState(0);       // Increment to signal game state changed
+    const [reconnected, setReconnected] = useState(false);   // Resend authorization on reconnection
 
     const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
     const bsi_ws_server = `${process.env.REACT_APP_BSI_SERVER_WS_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
@@ -45,11 +46,12 @@ function useBSI() {
     const { sendJsonMessage } = useWebSocket(bsi_ws_server, {
 
         onOpen: () => {
-            console.log('useBSI.js:onOpen: websocket connection opened.');
+            console.log('useBSI.js:useWebSocket:onOpen: connection opened.');
+            setReconnected(true);
         },
 
         onMessage: (message) => {
-            console.log('Play.js:onMessage: message received: ' + message.data);
+            console.log('useBSI.js:useWebSocket:onMessage: message received: ' + message.data);
             const object = JSON.parse(message.data);
             if (object.type === typesDef.GAME_UPDATE) {
                 setGameUpdated((gameUpdated) => gameUpdated + 1);
@@ -99,16 +101,18 @@ function useBSI() {
     }, [auth.token]);
 
     // Listen for a valid auth token and post it to the bsi server websocket when it appears
+    // Will get called twice per reconnection, but the second pass will do nothing.
     useEffect(() => {
         console.log('useBSI.js:useEffect (authorize websocket) called');
-        if (auth?.token != null && sendJsonMessage) {
+        if (auth?.token != null && sendJsonMessage && reconnected) {
             console.log('useBSI.js:useEffect: websocket sending auth token: ' + auth.token);
             sendJsonMessage({
                 type: typesDef.AUTHORIZATION,
                 token: `${auth.token.token_type} ${auth.token.access_token}`
             });
+            setReconnected(false);
         }
-    }, [auth.token, sendJsonMessage]);
+    }, [auth.token, reconnected, sendJsonMessage]);
 
      // Listen for a valid auth token and ensure the user is in the bsi_server roster table
      // The bsi_server keeps a separate roster from the ou_oauth server.
@@ -144,10 +148,34 @@ function useBSI() {
         return Promise.resolve();
     }
 
-    // Return a getGame promise
+    // Return a promise for in-progress games for the current user (user set on game server)
+    function getGames() {
+        console.log('useBSI.js:useBSI:getGames called');
+        return axios.get(`${bsi_server}/api/games/othello/`, {params: {winner: ''}});
+    }
+
+    // Return a promise for all visible players whether online or not
+    function getRoster() {
+        console.log('useBSI.js:useBSI:getRoster called');
+        return axios.get(`${bsi_server}/api/roster`, {params: {visible: true}});
+    }
+
+    // Return a promise for all previous completed games for the current user (user set on game server)
+    function getPreviousGames() {
+        console.log('useBSI.js:useBSI:getPreviousGames called');
+        return axios.get(`${bsi_server}/api/games/othello/`, {params: {winner: {'$gte': ' '}}});
+    }
+
+    // Return a promise for a specific game
     function getGame(id) {
         console.log('useBSI.js:useBSI:getGame called: id = ' + id);
         return axios.get(`${bsi_server}/api/games/othello/${id}`);
+    }
+
+    // Create a new game
+    function newGame(gameParameters) {
+        console.log('useBSI.js:useBSI:newGame called: gameParameters = ' + gameParameters);
+        return axios.post(`${bsi_server}/api/games/othello/`, gameParameters);
     }
 
     // Return a makeMove promise
@@ -160,7 +188,11 @@ function useBSI() {
     return {
         gameUpdated,
         removePresence,
+        getGames,
+        getRoster,
+        getPreviousGames,
         getGame,
+        newGame,
         makeMove,
     };
 }

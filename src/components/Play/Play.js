@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 //import React, { useCallback, useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import FireWorks from './FireWorks';
 import { AuthConsumer } from '../Authentication/useAuth';
@@ -25,6 +25,8 @@ export default function Play() {
   const [lastMove, setLastMove] = useState({x: -1, y: -1});
   const [fireworks, setFireworks] = useState(false);
 
+  const userCanPlay = useRef(false);
+
   const username = auth.username;
   const usercolor = game?.players[0] === username ? game?.colors[0] : game?.colors[1];
   const usercolorlong = usercolor === 'W' ? 'White' : 'Black';
@@ -32,41 +34,72 @@ export default function Play() {
   const oppocolor = usercolor === 'W' ? 'B' : 'W';
   const oppocolorlong = oppocolor === 'W' ? 'White' : 'Black';
 
-  // Fetch the game
+  // Fetch the current game either on load (id changes), or when the opposing
+  // player makes a move (bsi.gameUpdated).
   useEffect(() => {
     if (id != null) {
       bsi.getGame(id)
-      .then((res) => {
-        console.log("Setting game to: ", res.data);
-        setGame(res.data);
-      })
-      .catch((err) => {
-        console.log('Could not retrieve requested game: ', err);
-      });
+      .then(res => setGame(res.data))
+      .catch(err => gameUpdateError(err));
     }
-  }, [id, bsi]);
+  }, [id, bsi, bsi.gameUpdated]);
 
-  // Redraw the game if change was indicated on websocket
+  // Update the messaging when the game changes (and we have extracted who
+  // is playing the game).
   useEffect(() => {
-    if (id != null) {
-      bsi.getGame(id)
-      .then((res) => {
-        gameUpdated(res.data, username, opponame); // Omit mover to make self-testing work better
-      })
-      .catch((err) => {
-        gameUpdateError(err);
-      });
+    if (game != null && username != null && opponame != null) {
+      gameUpdated(game, username, opponame, lastMove);
     }
-  }, [id, bsi, username, opponame, bsi.gameUpdated]);
+  }, [game, username, opponame, lastMove] );
 
   // Called any time the game state is successfully loaded OR updated
   // due to either player entering a legal move.
-  const gameUpdated = (game, username, opponame, mover) => {
-    setGame(game);
-    setResponse('');
-    if (mover !== username) {
-      setResponse('othelloOpponentMoved');
+  const gameUpdated = (game, username, opponame, lastMove) => {
+
+    // This logic is for determining what text to display as a result of
+    // whatever caused the game to update. It sets the 'response' state to
+    // something (including potentially nothing). Note that the response state
+    // can be overwritten as the logic progresses. e.g. we can say that it is
+    // your turn, but might subsequently discover that the game was already
+    // won by someone and so we do something different. If in fact the game is
+    // finished, we may request some additional animations.
+
+    // Need to know at what point the user has been given an opportunity
+    // to move. This affects messaging when first loading the game.
+    if (!userCanPlay.current) {
+      userCanPlay.current = game.next === username;
     }
+
+    // Current player has not had a turn since loading the game. This is a
+    // unique message they will see until such time as they can make their
+    // first move.
+    if (!userCanPlay.current) {
+      setResponse('othelloStartNotYourTurn');
+    }
+
+    // Game updated by one of the players. We can only get here if the last
+    // move by either player was a success. See gameUpdateError for illegal
+    // move or general server failure responses.
+    if (userCanPlay.current)  {
+      if (game.next === opponame) {
+        // Last move was made by the current player. Generate a pithy response.
+        if ((lastMove.x === 0 && lastMove.y === 0) ||
+            (lastMove.x === 0 && lastMove.y === 7) ||
+            (lastMove.x === 7 && lastMove.y === 0) ||
+            (lastMove.x === 7 && lastMove.y === 7)) {
+          setResponse('othelloCorner');
+        } else {
+          const n = Math.floor(Math.random() * 10);
+          setResponse('othelloPithy' + n.toString());
+        }
+      } else {
+        // Last move was made by the opponent.
+        setResponse('othelloYourTurn');
+      }
+    }
+
+    // Game has already been won by someone. Tell the player who won. Treat
+    // the winner to fireworks.
     if (game.winner !== '') {
       if (game.winner === username) {
         setResponse('othelloWinner');
@@ -105,34 +138,60 @@ export default function Play() {
     if (game.winner !== '')
       return;
     bsi.makeMove(id, {x, y})
-    .then((res) => {
+    .then(res => {
       setLastMove({x, y});
-      gameUpdated(res.data, username, opponame, username);
+      setGame(res.data);
     })
-    .catch((err) => {
-      gameUpdateError(err);
-    });
+    .catch(err => gameUpdateError(err));
   }
 
-  const goodMove = () => {
-    if ((lastMove.x === 0 && lastMove.y === 0) ||
-        (lastMove.x === 0 && lastMove.y === 7) ||
-        (lastMove.x === 7 && lastMove.y === 0) ||
-        (lastMove.x === 7 && lastMove.y === 7)) {
-      return "Oh yea!!!";
-    }
-    switch (Math.floor(Math.random() * 10)) {
-      case 0: return "Cunning!";
-      case 1: return "Nice one!";
-      case 2: return "Well done."
-      case 3: return "More like that!"
-      case 4: return "Nice move."
-      case 5: return "You've got them on the run now."
-      default: return null;
-    }
+  const welcomeText = () => {
+    return <p className="welcome">Welcome {username}. You are playing:&nbsp;&nbsp;<span className="token adorn">{renderToken(usercolor)}</span></p>
   }
 
-  const translateResponse = () => {
+  const renderToken = (token) => {
+    if (token==='E')
+      return "";
+    return (
+      <svg width="100%" height="100%">
+        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
+         fill={token==='W' ? "white" : "black"} />
+      </svg>
+    )
+  }
+
+  const nextPlayerText = () => {
+    if (game?.winner === '') {
+      if (game?.next === username) {
+        return <p><strong>Next move:</strong> you are next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
+      } else if (game?.next === opponame) {
+        return <p><strong>Next move:</strong> {game?.next} is next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
+      } else {
+        return <p><strong>Next move:</strong> Game progression error. It is unknown who is next.</p>
+      }
+    }
+    return null;
+  }
+
+  const resultText = (winner) => {
+    if (winner == null) {
+      return null;
+    }
+    if (winner === '') {
+      return <p>{responseText()}</p>
+    }
+    let style = "result";
+    if (winner === username) {
+      style = "result win";
+    } else if (winner === opponame) {
+      style = "result lose";
+    } else if (winner === 'tie') {
+      style = "result draw";
+    }
+    return <p className={style} onClick={() => playReward(game?.winner, username, opponame, 10)}>{responseText()}</p>
+  }
+
+  const responseText = () => {
 
     switch (response) {
 
@@ -156,9 +215,11 @@ export default function Play() {
       case 'othelloTerminatingCellNotPresent':
         return "That move would capture no pieces.";
 
-      // Special case
-      case 'othelloOpponentMoved':
+      // Special cases
+      case 'othelloYourTurn':
         return "It is your turn.";
+      case 'othelloStartNotYourTurn':
+        return `It is ${opponame}'s turn.`;
 
       // Othello game result domain
       case 'othelloWinner':
@@ -168,30 +229,33 @@ export default function Play() {
       case 'othelloTie':
         return "It's a draw!";
 
+      // Othello move analysis domain
+      case 'othelloCorner':
+        return "Oh yea!!!";
+      case 'othelloPithy0':
+        return "Cunning!";
+      case 'othelloPithy1':
+        return "Nice one!";
+      case 'othelloPithy2':
+        return "Well done.";
+      case 'othelloPithy3':
+        return "More like that!"
+      case 'othelloPithy4':
+        return "Nice move.";
+      case 'othelloPithy5':
+        return "You've got them on the run now.";
+      case 'othelloPithy6':
+      case 'othelloPithy7':
+      case 'othelloPithy8':
+      case 'othelloPithy9':
+        return "";
+
       default:
-        // Move was accepted and applied -encourage the player
-        if (response === '')
-          return goodMove();
-        // Unparsed response -display it so it can be reported
+        if (response == null)
+          return "";
+        // Unknown response -display it so it can be reported
         return response;
     }
-  }
-
-  const nextPlayerText = () => {
-    if (game?.winner === '') {
-      if (game?.next === username) {
-        return <p><strong>Next move:</strong> you are next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
-      } else if (game?.next === opponame) {
-        return <p><strong>Next move:</strong> {game?.next} is next, playing {game?.next === username ? usercolorlong : oppocolorlong}.</p>
-      } else {
-        return <p><strong>Next move:</strong> Game progression error. It is unknown who is next.</p>
-      }
-    }
-    return null;
-  }
-
-  const welcomeText = () => {
-    return <p className="welcome">Welcome {username}. You are playing:&nbsp;&nbsp;<span className="token adorn">{renderToken(usercolor)}</span></p>
   }
 
   const playReward = (winner, username, opponame, duration) => {
@@ -201,35 +265,6 @@ export default function Play() {
     } else if (winner === opponame) {
     } else if (winner === 'tie') {
     }
-  }
-
-  const resultText = (winner) => {
-    if (winner == null) {
-      return null;
-    }
-    if (winner === '') {
-      return <p>{translateResponse()}</p>
-    }
-    let style = "result";
-    if (winner === username) {
-      style = "result win";
-    } else if (winner === opponame) {
-      style = "result lose";
-    } else if (winner === 'tie') {
-      style = "result draw";
-    }
-    return <p className={style} onClick={() => playReward(game?.winner, username, opponame, 10)}>{translateResponse()}</p>
-  }
-
-  const renderToken = (token) => {
-    if (token==='E')
-      return "";
-    return (
-      <svg width="100%" height="100%">
-        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
-         fill={token==='W' ? "white" : "black"} />
-      </svg>
-    )
   }
 
   return (

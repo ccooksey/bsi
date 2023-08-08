@@ -4,14 +4,15 @@
 
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { AuthConsumer } from '../Authentication/useAuth';
+import { BSIConsumer } from '../App/useBSI';
 import '../App/AppCookieKeys';
 import '../App/App.css';
 
 export default function NewGame() {
 
   const auth = AuthConsumer();
+  const bsi = BSIConsumer();
   const navigate = useNavigate();
   const username = auth.username;
 
@@ -19,7 +20,7 @@ export default function NewGame() {
   const opponent = location?.state?.opponent;
 
   // This is just for rendering what the starting board will look like
-  // on the new game screen. The game server will initialise the real game.
+  // on the new game screen. The game server will initialise any real games.
   const gameTemplate = [
     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
     ['E', 'E', 'E', 'E', 'E', 'E', 'E', 'E',],
@@ -35,8 +36,6 @@ export default function NewGame() {
     opponent: opponent,
     usercolor: 'B'
   })
-
-  const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
 
   const renderToken = (token) => {
     if (token==='E')
@@ -62,7 +61,7 @@ export default function NewGame() {
     if (typeof e.cancelable !== "boolean" || e.cancelable) {
       e.preventDefault();
     }
-    axios.post(`${bsi_server}/api/games/othello/`, gameParameters)
+    bsi.newGame(gameParameters)
     .then((res) => {
       if (res?.data?.id != null) {
         navigate('/play', {state: {id: res.data.id}});
@@ -87,7 +86,7 @@ export default function NewGame() {
               <tr key={y}>
                 {rows != null && rows.map((cells, x) => {
                   return (
-                    <td key={x} className="othelloCell">
+                    <td key={x} className="token othello">
                       {renderToken(cells)}
                     </td>
                   )})
