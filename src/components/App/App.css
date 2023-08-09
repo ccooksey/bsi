@@ -60,12 +60,15 @@ table.dashboard>tfoot:not(:last-child) {
 /* Get everything juust right */
 table.dashboard th:not(:last-child),
 table.dashboard th:not(:first-child) {
-  width: 200px;
+  min-width: 190px;
+  width: 190px;
 }
 table.dashboard th:first-child {
+  min-width: 120px;
   width: 120px;
 }
 table.dashboard th:last-child {
+  min-width: 100px;
   width: 100px;
 }
 table.dashboard td:last-child {

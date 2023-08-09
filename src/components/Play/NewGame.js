@@ -17,7 +17,7 @@ export default function NewGame() {
   const username = auth.username;
 
   const location = useLocation();
-  const opponent = location?.state?.opponent;
+  const opponame = location?.state?.opponent;
 
   // This is just for rendering what the starting board will look like
   // on the new game screen. The game server will initialise any real games.
@@ -33,7 +33,7 @@ export default function NewGame() {
   ];
 
   const [gameParameters, setGameParameters] = useState({
-    opponent: opponent,
+    opponent: opponame,
     usercolor: 'B'
   })
 
@@ -78,7 +78,7 @@ export default function NewGame() {
   return (
     <div>
       <h2>New Game</h2>
-      <h3>{username} vs {opponent}</h3>
+      <h3>{username} vs {opponame}</h3>
       <table className="othelloTable">
         <tbody>
           {gameTemplate.map((rows, y) => {
@@ -107,7 +107,7 @@ export default function NewGame() {
           <br/>
           <input type="radio" onChange={handlePlayerOneChange} id="player2" defaultChecked={gameParameters.usercolor === 'W'}
             name="firstToMove" value="player2"></input>
-          <label htmlFor="player2">{opponent}</label>
+          <label htmlFor="player2">{opponame}</label>
           <br/>
           <br/>
         </div>

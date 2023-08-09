@@ -6,6 +6,7 @@ import React, { useEffect, useState, useContext, createContext } from 'react';
 import axios from 'axios';
 import useWebSocket from 'react-use-websocket';
 import { AuthConsumer } from '../Authentication/useAuth';
+import { wsMsgTypes } from '../../bsi_protocol';
 
 const bsiContext = createContext();
 
@@ -22,14 +23,6 @@ export const BSIConsumer = () => {
     return useContext(bsiContext);
 }
 
-// Websocket protocol. This does not belong here. It should be imported from bsi_server
-const typesDef = {
-    AUTHORIZATION: 'authorization',
-    GAME_UPDATE: 'gameUpdated',
-    PLAYER_ONLINE: 'playerOnline',
-    PLAYER_OFFLINE: 'playerOffline'
-}
-
 // Provider hook that creates bsi object and handles state. It handles registration
 // signin, and adding token headers to the bsi server calls.
 function useBSI() {
@@ -37,8 +30,10 @@ function useBSI() {
     const auth = AuthConsumer();    
 
     const [intercepting, setIntercepting] = useState(false);
-    const [gameUpdated, setGameUpdated] = useState(0);       // Increment to signal game state changed
-    const [reconnected, setReconnected] = useState(false);   // Resend authorization on reconnection
+    const [reconnected, setReconnected] = useState(false);      // Resend authorization on reconnection
+    const [gameUpdated, setGameUpdated] = useState(0);          // Increment to signal game state changed
+    const [gameCreated, setGameCreated] = useState(0);          // Increment to signal a game has been created
+    const [onlinePlayers, setOnlinePlayers] = useState([]);     // Array of online players
 
     const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
     const bsi_ws_server = `${process.env.REACT_APP_BSI_SERVER_WS_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
@@ -53,7 +48,19 @@ function useBSI() {
         onMessage: (message) => {
             console.log('useBSI.js:useWebSocket:onMessage: message received: ' + message.data);
             const object = JSON.parse(message.data);
-            if (object.type === typesDef.GAME_UPDATE) {
+            if (object.type === wsMsgTypes.PLAYER_ONLINE) {
+                if (onlinePlayers.filter(player => player === object.player).length === 0) {
+                    setOnlinePlayers(players => [...players, object.player]);
+                    // setOnlinePlayers([...onlinePlayers, object.player]);
+                }
+            } else if (object.type === wsMsgTypes.PLAYER_OFFLINE) {
+                setOnlinePlayers(players => players.filter(player => {return player !== object.player;}));
+                // setOnlinePlayers(onlinePlayers.filter(player => {return player !== object.player;}));
+            } else if (object.type === wsMsgTypes.GAME_CREATED) {
+                if (onlinePlayers.filter(player => player === object.player).length === 0) {
+                    setGameCreated((gameCreated) => gameCreated + 1);
+                }
+            } else if (object.type === wsMsgTypes.GAME_UPDATED) {
                 setGameUpdated((gameUpdated) => gameUpdated + 1);
             }
         },
@@ -107,7 +114,7 @@ function useBSI() {
         if (auth?.token != null && sendJsonMessage && reconnected) {
             console.log('useBSI.js:useEffect: websocket sending auth token: ' + auth.token);
             sendJsonMessage({
-                type: typesDef.AUTHORIZATION,
+                type: wsMsgTypes.AUTHORIZATION,
                 token: `${auth.token.token_type} ${auth.token.access_token}`
             });
             setReconnected(false);
@@ -172,13 +179,13 @@ function useBSI() {
         return axios.get(`${bsi_server}/api/games/othello/${id}`);
     }
 
-    // Create a new game
+    // Return a promise to create a new game
     function newGame(gameParameters) {
         console.log('useBSI.js:useBSI:newGame called: gameParameters = ' + gameParameters);
         return axios.post(`${bsi_server}/api/games/othello/`, gameParameters);
     }
 
-    // Return a makeMove promise
+    // Return a promise to make a move
     function makeMove(id, {x, y}) {
         console.log('useBSI.js:useBSI:makeMove called: {x, y} = ' + {x, y});
         return axios.post(`${bsi_server}/api/games/othello/${id}/move/`, {x, y});
@@ -186,6 +193,8 @@ function useBSI() {
 
     // Return the user object and bsi methods
     return {
+        onlinePlayers,
+        gameCreated,
         gameUpdated,
         removePresence,
         getGames,

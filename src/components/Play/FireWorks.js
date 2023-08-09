@@ -1,3 +1,7 @@
+//-----------------------------------------------------------------------------
+// Copyright 2023 Chris Cooksey
+//-----------------------------------------------------------------------------
+
 import React, { useState, useEffect } from 'react';
 import { Fireworks } from 'fireworks-js';
 

@@ -21,13 +21,15 @@ export default function Dashboard() {
   const [previousGames, setPreviousGames] = useState(null);
 
   // Load current games user is playing (game server will add the player name)
+  // We also keep an eye on the newGame state which is changed when an
+  // opponent creates a new game against the current user.
   useEffect(() => {
     if (auth?.token != null) {
       bsi.getGames()
       .then(res => setGames(res.data))
       .catch(err => console.log('Could not retrieve current games ', err));
     }
-  }, [auth.token, bsi]);
+  }, [auth.token, bsi, bsi.newGame]);
 
   // Load opponent roster
   useEffect(() => {
@@ -54,16 +56,53 @@ export default function Dashboard() {
   }
 
   // Handle "New Game" click
-  const handleNewGame = (e, opponent) => {
+  const handleNewGame = (e, opponame) => {
     e.preventDefault();
-    navigate('/newgame', {state: {'opponent': opponent}});
+    navigate('/newgame', {state: {opponent: opponame}});
   }
 
 //   // Handle "Replay" click
-//   const handleReplay = (e, opponent) => {
+//   const handleReplay = (e, opponame) => {
 //     e.preventDefault();
-// //    navigate('/newgame', {state: {'opponent': opponent}});
+// //    navigate('/newgame', {state: {opponent: opponame}});
 //   }
+
+  const renderCallout = (color) => {
+    return (
+      <svg width="10px" height="10px">
+        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
+        fill={color} />
+      </svg>
+    )
+  }
+
+  function playerText(username) {
+    let s = "";
+    if (bsi.onlinePlayers.filter(player => player === username).length >= 1) {
+      s = renderCallout("green");
+    }
+    return (
+      <span>
+        {s}&nbsp;{username}
+      </span>
+    );
+  }
+
+  function opponentText(item, username) {
+    if (item == null || username == null) {
+      return null;
+    }
+    const opponame = item.players[0] !== username ? item.players[0] : item.players[1];
+    let s = "";
+    if (bsi.onlinePlayers.filter(player => player === username && player === item.next).length >= 1) {
+      s = renderCallout("yellow");
+    }
+    return (
+      <span>
+        {s}&nbsp;{opponame}
+      </span>
+    );
+  }
 
   return (
     <div>
@@ -82,7 +121,7 @@ export default function Dashboard() {
             {games.map((item) => {
               return (
                 <tr key={item._id}>
-                  <td>{item.players[0] !== username ? item.players[0] : item.players[1]}</td>
+                  <td>{opponentText(item, username)}</td>
                   <td>{new Date(item.created).toLocaleString(undefined, {dateStyle: 'short', timeStyle: 'short'})}</td>
                   <td><button onClick={(e) => handleResume(e, item._id)}>Resume</button></td>
                 </tr>
@@ -105,7 +144,7 @@ export default function Dashboard() {
             {roster.map((item) => {
               return (
                 <tr key={item._id}>
-                  <td>{item.username}</td>
+                  <td>{playerText(item.username)}</td>
                   <td>{new Date(item.joindate).toLocaleString(undefined, {dateStyle: 'short', timeStyle: 'short'})}</td>
                   <td><button onClick={(e) => handleNewGame(e, item.username)}>New Game</button></td>
                 </tr>
