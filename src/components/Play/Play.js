@@ -2,7 +2,6 @@
 // Copyright 2023 Chris Cooksey
 //-----------------------------------------------------------------------------
 
-//import React, { useCallback, useState, useEffect } from 'react';
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import FireWorks from './FireWorks';
@@ -21,6 +20,7 @@ export default function Play() {
   console.log('Play.js:Play:game id is ' + id);
 
   const [game, setGame] = useState(null);
+  const [score, setScore] = useState(null);
   const [response, setResponse] = useState(null);
   const [lastMove, setLastMove] = useState({x: -1, y: -1});
   const [fireworks, setFireworks] = useState(false);
@@ -34,17 +34,27 @@ export default function Play() {
   const oppocolor = usercolor === 'W' ? 'B' : 'W';
   const oppocolorlong = oppocolor === 'W' ? 'White' : 'Black';
 
-  // Fetch the current game either on load (id changes), or when the opposing
+  // Fetch the current game either on load (id changes), or when either
   // player makes a move (bsi.gameUpdated).
   useEffect(() => {
-    if (id != null) {
+    if (auth?.signingOut.current) {
+      console.log('Play.js: useEffect (get game) aborting because we are signing out');
+    }
+    if (id == null) {
+      console.log('Play.js: useEffect (get game) aborting because game id is null');
+    }
+    if (!auth?.signingOut.current && id != null) {
+      console.log('Play.js: useEffect (getGame): fetching game id ' + id);
       bsi.getGame(id)
-      .then(res => setGame(res.data))
+      .then(res => {
+        console.log('Play.js: useEffect (getGame): game fetched');
+        setGame(res.data)
+       })
       .catch(err => gameUpdateError(err));
     }
-  }, [id, bsi, bsi.gameUpdated]);
+  }, [id, auth?.signingOut, bsi, bsi.gameUpdated]);
 
-  // Update the messaging when the game changes (and we have extracted who
+  // Update the messaging and scores when the game changes and when we know who
   // is playing the game).
   useEffect(() => {
     if (game != null && username != null && opponame != null) {
@@ -98,6 +108,24 @@ export default function Play() {
       }
     }
 
+    // Update the score
+    if(game?.gameState != null) {
+      let blackCount = 0;
+      let whiteCount = 0;
+      let i;
+      let j;
+      for (i = 0; i < 8; i++) {
+        for (j = 0; j < 8; j++) {
+          if (game.gameState[j][i] === 'B') {
+            blackCount += 1;
+          } else if (game.gameState[j][i] === 'W') {
+            whiteCount += 1;
+          }
+        }
+      }
+      setScore({blackCount, whiteCount});
+    }
+
     // Game has already been won by someone. Tell the player who won. Treat
     // the winner to fireworks.
     if (game.winner !== '') {
@@ -118,7 +146,7 @@ export default function Play() {
   const gameUpdateError = (err) => {
     // We'll consolidate different error domains to simplify
       // user notification.
-      console.log('Could not execute move: ', err);
+      console.log('Play.js: gameUpdateError: err = ', err);
       if (err?.response?.data?.othelloMoveError != null) {
         setResponse(err.response.data.othelloMoveError);
       } else if (err?.response?.data?.othelloDatabaseError != null) {
@@ -146,16 +174,36 @@ export default function Play() {
   }
 
   const welcomeText = () => {
-    return <p className="welcome">Welcome {username}. You are playing:&nbsp;&nbsp;<span className="token adorn">{renderToken(usercolor)}</span></p>
+    return <p className="welcome">Welcome <strong>{username}</strong>. You are playing:&nbsp;&nbsp;<span className="token adorn">{renderToken(usercolor)}</span></p>
   }
 
-  const renderToken = (token) => {
-    if (token==='E')
+  const displayScore = () => {
+    if (score == null)
+      return null;
+    return (
+      <p className="score-wrapper">
+        {renderScore("black", "WhiteSmoke", score.blackCount)}
+        {renderScore("white", "DimGrey", score.whiteCount)}
+      </p>
+    )
+  }
+
+  const renderScore = (ccolor, tcolor, count) => {
+    return (
+      <svg width="50px" height="50px">
+        <circle cx="50%" cy="50%" r="45%" stroke="grey" strokeWidth="1" fill={ccolor} />
+        <text x="50%" y="50%" fontSize="150%" fill={tcolor} textAnchor="middle" dy=".3em">{count}</text>
+      </svg>
+    )
+  }
+
+  const renderToken = (color) => {
+    if (color==='E')
       return "";
     return (
       <svg width="100%" height="100%">
         <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
-         fill={token==='W' ? "white" : "black"} />
+         fill={color==='W' ? "white" : "black"} />
       </svg>
     )
   }
@@ -272,7 +320,8 @@ export default function Play() {
       <h2>Play</h2>
       <p><strong>{game?.players[0]}</strong> vs <strong>{game?.players[1]}</strong></p>
       {welcomeText()}
-      <FireWorks enabled={fireworks ? "true" : "false"}></FireWorks>
+      {displayScore()}
+      <FireWorks enabled={fireworks ? "true" : "false"} />
       <table className="othelloTable">
         <tbody>
           {game?.gameState.map((rows, y) => {

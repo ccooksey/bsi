@@ -18,15 +18,15 @@ export default function Navigation() {
   const handleSignOut = (() => {
     bsi.removePresence()
     .then(() => {
-      console.log('User presence removed');
-      auth.signout();
+      console.log('Navigation.js: handleSignOut: bsi.removePresence() completed.');
+      return auth.signout();
     })
     .then(() => {
-      console.log('User has signed out');
+      console.log('Navigation.js: handleSignOut: auth.signout() completed.');
       navigate('/');
     })
     .catch(() => {
-      console.log('Authorization server offline. User still signed out.');
+      console.log('Navigation.js: handleSignOut: Authorization server offline. User still signed out.');
     });
   });
 

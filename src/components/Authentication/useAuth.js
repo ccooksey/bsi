@@ -15,7 +15,7 @@
 // There are a LOT of console logs. The code would be a lot shorter
 // without them.
 
-import React, { useState, useContext, createContext } from 'react';
+import React, { useState, useContext, useRef, createContext } from 'react';
 
 // Possible statuses:
 // error: any type of communication error with the authorization server
@@ -49,6 +49,7 @@ function useAuth() {
     const [isLoading, setIsLoading] = useState(false);
     const [token, setToken] = useState(null);
     const [username, setUsername] = useState(null);
+    const signingOut = useRef(false);
 
     const ou_oauth2 = `${process.env.REACT_APP_OU_OAUTH2_SERVER_URL}:${process.env.REACT_APP_OU_OAUTH2_SERVER_PORT}`;
  
@@ -163,6 +164,11 @@ function useAuth() {
                         // Example result:
                         // {token_type: 'bearer', access_token: 'f024003bc4177fce4d865ed66f79637d489d88c5', expires_in: 3600}}
                         console.log('useAuth.js:useAuth:signin:callback: token = ', token);
+                        // Ok to consider using protected resources. This is an optimization
+                        // to prevent contacting the game server when we are signing out.
+                        // It isn't quite the same thing as checking auth?.token. Don't use it
+                        // for that because it will cause difficult to trace problems.
+                        signingOut.current = false;
                         setToken(token);
                         setUsername(username);
                         resolve({status: 'signedin'});
@@ -264,7 +270,14 @@ function useAuth() {
     function signout() {
  
         console.log('useAuth.js:useAuth:signout called');
-    
+
+        // All communication with protected resources should check that
+        // we are not signing out. If we are, don't bother commnicating
+        // with the protected resource because it's going to fail in all
+        // likelihood. This is an optimization to prevent many bright
+        // red authorization errors in the console.
+        signingOut.current = true;
+
         var promise = new Promise((resolve, reject) => {
  
             setIsLoading(true);
@@ -394,6 +407,7 @@ function useAuth() {
         isLoading,
         token,
         username,
+        signingOut,
         register,
         signin,
         autoSignin,

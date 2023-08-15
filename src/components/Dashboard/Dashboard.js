@@ -24,30 +24,30 @@ export default function Dashboard() {
   // We also keep an eye on the newGame state which is changed when an
   // opponent creates a new game against the current user.
   useEffect(() => {
-    if (auth?.token != null) {
+    if (auth?.token != null && !auth?.signingOut.current) {
       bsi.getGames()
       .then(res => setGames(res.data))
       .catch(err => console.log('Could not retrieve current games ', err));
     }
-  }, [auth.token, bsi, bsi.newGame]);
+  }, [auth?.token, auth?.signingOut, bsi, bsi.gameCreated, bsi.activeGames]);
 
   // Load opponent roster
   useEffect(() => {
-    if (auth?.token != null) {
+    if (auth?.token != null && !auth?.signingOut.current) {
       bsi.getRoster()
       .then(res=> setRoster(res.data))
       .catch(err => console.log('Could not retrieve roster ', err));
     }
-  }, [auth.token, bsi]);
+  }, [auth?.token, auth?.signingOut, bsi]);
 
   // Load previous games user has played (game server will add the player name)
   useEffect(() => {
-    if (auth?.token != null) {
+    if (auth?.token != null && !auth?.signingOut.current) {
       bsi.getPreviousGames()
       .then(res => setPreviousGames(res.data))
       .catch(err => console.log('Could not retrieve previous games ', err));
     }
-  }, [auth.token, bsi]);
+  }, [auth?.token, auth?.signingOut, bsi]);
 
   // Handle "Resume" click
   const handleResume = (e, _id) => {
@@ -70,8 +70,7 @@ export default function Dashboard() {
   const renderCallout = (color) => {
     return (
       <svg width="10px" height="10px">
-        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1"
-        fill={color} />
+        <circle cx="50%" cy="50%" r="47%" stroke="grey" strokeWidth="1" fill={color} />
       </svg>
     )
   }
@@ -88,18 +87,35 @@ export default function Dashboard() {
     );
   }
 
+  const renderActive = () => {
+    return (
+      <span className="dashboardNoteText">
+        Active <br/>
+      </span>
+    )
+  }
+
   function opponentText(item, username) {
+
     if (item == null || username == null) {
       return null;
     }
+
     const opponame = item.players[0] !== username ? item.players[0] : item.players[1];
-    let s = "";
-    if (bsi.onlinePlayers.filter(player => player === username && player === item.next).length >= 1) {
-      s = renderCallout("yellow");
-    }
+
+    const activeGame =
+      bsi.activeGames?.get(opponame) != null &&
+      bsi.activeGames?.get(opponame) === item?._id;
+    const activeMarker = activeGame ? renderActive() : null;
+
+    const myTurn =
+      bsi.onlinePlayers.filter(player => player === username && player === item.next).length >= 1;
+    const myTurnMarker = myTurn ? renderCallout("grey") : null;
+
     return (
       <span>
-        {s}&nbsp;{opponame}
+        {/* {myTurnMarker}&nbsp;<span style={{color: activeGameColor}}>{opponame}</span> */}
+        {activeMarker}{myTurnMarker}&nbsp;{opponame}
       </span>
     );
   }

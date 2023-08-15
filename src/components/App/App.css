@@ -101,7 +101,12 @@ table.dashboard td {
   line-height: var(--cellSize);
   vertical-align: middle;
   margin-top: 0;
-  }
+}
+
+.dashboardNoteText {
+  font-style: italic;
+  font-size: smaller;
+}
 
 /* Othello game grid */
 .othelloTable {
@@ -141,6 +146,14 @@ table.dashboard td {
 
 .navigate-wrapper {
   padding-left:0px;
+}
+
+.score-wrapper {
+  padding:5px;
+  width: fit-content;
+  border: 1px solid pink;
+  border-radius: 10px;
+  background: green;
 }
 
 .content-wrapper {

@@ -29,11 +29,12 @@ function useBSI() {
 
     const auth = AuthConsumer();    
 
-    const [intercepting, setIntercepting] = useState(false);
-    const [reconnected, setReconnected] = useState(false);      // Resend authorization on reconnection
+    const [wsConnected, setWSConnected] = useState(false);      // Websocket is connected
+    const [wsAuthorized, setWSAuthorized] = useState(false);    // Websocket is authorized
+    const [onlinePlayers, setOnlinePlayers] = useState([]);     // Array of online players
+    const [activeGames, setActiveGames] = useState(new Map());  // Map of opponents with a game loaded
     const [gameUpdated, setGameUpdated] = useState(0);          // Increment to signal game state changed
     const [gameCreated, setGameCreated] = useState(0);          // Increment to signal a game has been created
-    const [onlinePlayers, setOnlinePlayers] = useState([]);     // Array of online players
 
     const bsi_server = `${process.env.REACT_APP_BSI_SERVER_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
     const bsi_ws_server = `${process.env.REACT_APP_BSI_SERVER_WS_URL}:${process.env.REACT_APP_BSI_SERVER_PORT}`;
@@ -42,26 +43,48 @@ function useBSI() {
 
         onOpen: () => {
             console.log('useBSI.js:useWebSocket:onOpen: connection opened.');
-            setReconnected(true);
+            setWSConnected(true);
+            setWSAuthorized(false);
+            setOnlinePlayers([]);
+            setActiveGames(new Map());
+        },
+
+        onClose: () => {
+            console.log('useBSI.js:useWebSocket:onClose: connection closed.');
+            setWSConnected(false);
+            setWSAuthorized(false);
+            setOnlinePlayers([]);
+            setActiveGames(new Map());
         },
 
         onMessage: (message) => {
             console.log('useBSI.js:useWebSocket:onMessage: message received: ' + message.data);
             const object = JSON.parse(message.data);
-            if (object.type === wsMsgTypes.PLAYER_ONLINE) {
+            if (object.type === wsMsgTypes.AUTHORIZATION) {
+                setWSAuthorized(object.authorized);
+            } else if (object.type === wsMsgTypes.PLAYER_ONLINE) {
                 if (onlinePlayers.filter(player => player === object.player).length === 0) {
                     setOnlinePlayers(players => [...players, object.player]);
-                    // setOnlinePlayers([...onlinePlayers, object.player]);
+                    // Potential bug: A reconnected websocket while in a game view will not
+                    // resend the GAME_ACTIVE message which we deleted in the PLAYER_OFFLINE
+                    // response below.
                 }
             } else if (object.type === wsMsgTypes.PLAYER_OFFLINE) {
                 setOnlinePlayers(players => players.filter(player => {return player !== object.player;}));
-                // setOnlinePlayers(onlinePlayers.filter(player => {return player !== object.player;}));
             } else if (object.type === wsMsgTypes.GAME_CREATED) {
                 if (onlinePlayers.filter(player => player === object.player).length === 0) {
                     setGameCreated((gameCreated) => gameCreated + 1);
                 }
             } else if (object.type === wsMsgTypes.GAME_UPDATED) {
                 setGameUpdated((gameUpdated) => gameUpdated + 1);
+            } else if (object.type === wsMsgTypes.GAME_ACTIVE) {
+                if (activeGames.get(object.player) !== object.id) {
+                    setActiveGames(new Map(activeGames.set(object.player, object.id)));
+                }
+            } else if (object.type === wsMsgTypes.GAME_INACTIVE) {
+                if (activeGames.delete(object.player)) {
+                    setActiveGames(new Map(activeGames));
+                }
             }
         },
 
@@ -70,14 +93,17 @@ function useBSI() {
         filter: () => false,
         retryOnError: true,
         shouldReconnect: () => true
-    });
+    },
+    // So cool -only tries to connect when auth?.token != null. This allows
+    // us to defer connecting the socket until after the user has signed in.
+    Boolean(auth?.token != null));
 
     // Add authentication token to all axios based bsi server calls.
     // Note that the interceptor needs to be ejected and renewed when the
     // token changes. It must also be ejected when the component unloads.
     useEffect(() => {
 
-        const resInterceptor = config => {
+        const resInterceptor = (config) => {
             if (auth?.token != null && config?.headers != null) {
                 config.headers = {
                 ...config.headers,
@@ -86,7 +112,8 @@ function useBSI() {
                 'Cache-Control': 'no-cache',
                 'Expires': 0
                 }
-                console.log("Headers = " + JSON.stringify(config?.headers));
+                console.log('UseBSI.js: useEffect: resInterceptor: Headers updated: ' +
+                    JSON.stringify(config?.headers));
             }
             return config;
         }
@@ -95,51 +122,49 @@ function useBSI() {
             return Promise.reject(error);
         }
 
-        console.log("Injecting interceptor");
+        console.log('UseBSI.js: useEffect: resInterceptor: Injecting interceptor');
         const interceptor = axios.interceptors.request.use(resInterceptor, errInterceptor);
-        setIntercepting(true);
 
         return () => {
-            console.log("Ejecting interceptor");
-            setIntercepting(false);
+            console.log('UseBSI.js: useEffect: resInterceptor: Ejecting interceptor');
             axios.interceptors.request.eject(interceptor);
         }
 
-    }, [auth.token]);
+    }, [auth?.token]);
 
-    // Listen for a valid auth token and post it to the bsi server websocket when it appears
-    // Will get called twice per reconnection, but the second pass will do nothing.
+    // Listen for a valid auth token and post it to the bsi server websocket when it
+    // appears. Will get called twice per reconnection, but the second pass will do nothing.
     useEffect(() => {
         console.log('useBSI.js:useEffect (authorize websocket) called');
-        if (auth?.token != null && sendJsonMessage && reconnected) {
+        if (auth?.token != null && wsConnected && sendJsonMessage != null) {
             console.log('useBSI.js:useEffect: websocket sending auth token: ' + auth.token);
             sendJsonMessage({
                 type: wsMsgTypes.AUTHORIZATION,
                 token: `${auth.token.token_type} ${auth.token.access_token}`
             });
-            setReconnected(false);
+            setWSConnected(false);
         }
-    }, [auth.token, reconnected, sendJsonMessage]);
+    }, [auth?.token, wsConnected, sendJsonMessage]);
 
      // Listen for a valid auth token and ensure the user is in the bsi_server roster table
      // The bsi_server keeps a separate roster from the ou_oauth server.
     useEffect(() => {
         console.log('useBSI.js:useEffect (update roster) called');
-        if (intercepting && auth?.token != null) {
+        if (auth?.token != null && !auth?.signingOut.current) {
             console.log('useBSI.js:useEffect: adding user to roster: ' + auth.token);
             axios.post(`${bsi_server}/api/roster`).catch(() => {});
         }
-    }, [bsi_server, auth.token, intercepting]);
+    }, [bsi_server, auth?.token, auth?.signingOut]);
 
-    // It's best to use an effect to establish the user's presence on login. We can
+    // It is best to use an effect to establish the user's presence on login. We can
     // react to the appropriate conditions that indicate actual presence.
     useEffect(() => {
         console.log('useBSI.js:useEffect (add presence) called');
-        if (intercepting && auth?.token != null) {
-            console.log('useBSI.js:useEffect presence: true');
+        if (auth?.token != null && !auth?.signingOut.current && wsAuthorized) {
+            console.log('useBSI.js:useEffect: adding presence');
             axios.post(`${bsi_server}/api/roster/presence`, {presence: true}).catch(() => {});
         }
-    }, [bsi_server, auth.token, intercepting]);
+    }, [bsi_server, auth?.token, auth?.signingOut, wsAuthorized]);
 
     // We'll use a hard-coded function for removing the user's presence on logout. We
     // can't just react to conditions because at that point it will be too late -the auth
@@ -147,8 +172,8 @@ function useBSI() {
     // rejected as unauthorized. Note that the bsi_server will also keep an eye on things.
     function removePresence() {
         console.log('useBSI.js:removePresence called');
-        if (intercepting && auth?.token != null) {
-            console.log('useBSI.js:removePresence presence: false');
+        if (auth?.token != null) {
+            console.log('useBSI.js:removePresence: removing presence');
             return axios.post(`${bsi_server}/api/roster/presence`, {presence: false});
         }
         console.log('useBSI.js:removePresence no action');
@@ -196,6 +221,7 @@ function useBSI() {
         onlinePlayers,
         gameCreated,
         gameUpdated,
+        activeGames,
         removePresence,
         getGames,
         getRoster,
