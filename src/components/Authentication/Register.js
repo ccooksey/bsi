@@ -26,6 +26,10 @@ export default function Register() {
   // Called everytime any field in the form changes
   const handleChange = (e) => {
     if (e.target.name === 'username') {
+      // Must be alphanumeric, no whitespace, no more than 16 characters
+      e.target.value = e.target.value.replace(/[^a-z0-9]/gi, '');
+      e.target.value = e.target.value.trim();
+      e.target.value = e.target.value.substring(0, 15);
       bake_cookie(global.CookieKeys.reginame, e.target.value);
     }
     if (e.target.name === 'eaddress') {
