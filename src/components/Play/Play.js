@@ -329,7 +329,7 @@ export default function Play() {
               <tr key={y}>
                 {rows != null && rows.map((cells, x) => {
                   return (
-                    <td key={x} className="token othello" onClick={(e) => handleCellClick(e, x, y)}>
+                    <td key={x} onClick={(e) => handleCellClick(e, x, y)}>
                       {renderToken(cells)}
                     </td>
                   )})

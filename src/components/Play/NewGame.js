@@ -86,7 +86,7 @@ export default function NewGame() {
               <tr key={y}>
                 {rows != null && rows.map((cells, x) => {
                   return (
-                    <td key={x} className="token othello">
+                    <td key={x}>
                       {renderToken(cells)}
                     </td>
                   )})

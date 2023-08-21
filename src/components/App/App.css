@@ -108,22 +108,29 @@ table.dashboard td {
   font-size: smaller;
 }
 
-/* Othello game grid */
+
+/* Othello game grid. Border adds 2px to table */
 .othelloTable {
+  --cellSize: 40px;
   table-layout: fixed;
-  /* width: calc(var(--cellSize) * 8); Does not work with tables. */
+  /* width: calc(var(8 * (--cellSize + 1) + 2)); (Does not work with tables) */
   width: 330px;
   border-collapse: collapse;
   border: 1px solid pink;
   cursor: crosshair;
 }
 
-/* Cells will be exactly width * 2 x height * 2 (retina?). */
-/* Borders are drawn outside, 0.5 * 2 * 2, i.e. 2 px wide. */
-.token.othello {
+/* Cells are (cellSize + border) * 2 wide and high, i.e. 41px */
+.othelloTable td {
   border: 0.5px solid black;
   background-color: #20C020;
-}
+  display: inline-block;
+  width: var(--cellSize);
+  height: var(--cellSize);
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0;
+ }
 
 
 .layout-wrapper {
